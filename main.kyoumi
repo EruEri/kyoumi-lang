@@ -1,10 +1,10 @@
-effect ask<'a> {
+effect ask('a) {
     val default : int
     fn ask() : 'a
     fn ask(int, int) : 'a
 }
 
-type option<'a> = 
+type option('a) = 
     | none
     | some('a)
 
@@ -15,7 +15,8 @@ type struct('a) = {
 
 external print(int, string) : bool = ""
 
-let (++) = 
+
+let (+) = 
     let d = 10;
     fun x y -> 
 

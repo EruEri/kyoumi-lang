@@ -69,7 +69,7 @@ module KNodeEffect = struct
   type effect_function = {
     name: string location;
     effect_sig_param: KyoType.kyo_type location list;
-    effect_sig_return_type: KyoType.kyo_type list;
+    effect_sig_return_type: KyoType.kyo_type location;
   }
 
   type effect_signature = 
@@ -90,7 +90,7 @@ module KNodeEnum = struct
     assoc_types: KyoType.kyo_type location list
   }
   type enum_declaration = {
-    name: string location;
+    enum_name: string location;
     polymorp_vars: KyoType.kyo_type_polymorphic location list;
     cases: enum_cases list 
   }

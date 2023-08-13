@@ -14,14 +14,18 @@
 %token <int> Integer_lit
 %token EFFECT TYPE EXTERNAL FUNCTION ANON_FUNCTION LET AS
 %token LBRACE RBRACE
+%token LPARENT RPARENT
 %token WILDCARD
 %token WHILE MATCH VAL
-%token COLON SEMICOLON DOUBLECOLON
+%token REF
+%token COLON SEMICOLON DOUBLECOLON EQUAL
+%token PIPE DOT
 %token COMMA
+%token EOF
 
 %start kyo_module
 
-%type <KyoumiAstkyo_module.kyo_module> kyo_module
+%type <KyoumiAst.kyo_module> kyo_module
 
 %%
 
@@ -30,8 +34,14 @@
   Position.located_value $startpos $endpos x
 }
 
+%inline parenthesis(X):
+    | delimited(LPARENT, X, RPARENT) { $1 }
+
+%inline bracketed(X):
+    | delimited(LBRACE, X, RPARENT) { $1 }
+
 %inline module_resolver:
-    | mp=located( loption(terminated(separated_nonempty_list(DOUBLECOLON, Module_IDENT), DOT)) ) { 
+    | mp=loption(terminated(separated_nonempty_list(DOUBLECOLON, located(Module_IDENT)), DOT)) { 
         mp
     }
 
@@ -41,27 +51,62 @@
 
 
 %inline generics(X):
-    | loption(delimited(INF, separated_nonempty_list(COMMA, located(X)), SUP)) {
+    | loption(parenthesis(separated_nonempty_list(COMMA, located(X)))) {
         $1
     }
 
 %inline signature:
-    | delimited(LPARENT, located(kyo_type), RPARENT) COLON located(kyo_type) {
+    | delimited(LPARENT, separated_list(COMMA, located(kyo_type)) , RPARENT) COLON located(kyo_type) {
         ($1, $3)
     }
 
 kyo_module:
-    | nodes = list(kyo_node) { nodes }
+    | nodes = list(kyo_node) EOF { nodes }
 
 kyo_node:
     | kyo_effect_decl { KNEffect $1 }
-    | kyo_enum_decl { KNEnum $1 }
-    | kyo_record_decl { KNRecord $1 }
+    | kyo_type_decl { $1 }
     | kyo_external_decl { KNExternal $1 }
     | kyo_function_decl { KNFunction $1 }
     | kyo_global_decl { KNGlobal $1 }
 
 
+kyo_function_decl:
+    | FUNCTION { failwith "TODO: kyo_function_decl" }
+
+kyo_external_decl:
+    | EXTERNAL { failwith "TODO: kyo_external_decl" }
+
+kyo_global_decl:
+    | LET { failwith "TODO: kyo_global_decl" }
+
+kyo_type_decl:
+    | TYPE record_name=located(IDENT) polymorp_vars=generics(kyo_ky_polymorphic) EQUAL fields=kyo_record_decl {
+        let open KNodeRecord in
+        KNRecord { record_name; polymorp_vars; fields }
+    }
+    | TYPE enum_name=located(IDENT) polymorp_vars=generics(kyo_ky_polymorphic) EQUAL cases=kyo_enum_decl {
+        let open KNodeEnum in
+        KNEnum { enum_name; polymorp_vars; cases }
+    }
+
+kyo_enum_decl:
+    | nonempty_list(kyo_enum_case) { $1 }
+
+%inline kyo_enum_case:
+    | PIPE case_name=located(IDENT) assoc_types=generics(kyo_type) {
+        let open KNodeEnum in
+        { case_name; assoc_types }
+    }
+
+kyo_record_decl:
+    | bracketed(trailing_separated_list(COMMA, kyo_record_field))  { $1 }
+
+%inline kyo_record_field:
+    | field_name=located(IDENT) COLON field_kyotype=located(kyo_type) {
+        let open KNodeRecord in
+        {field_name; field_kyotype}
+    }
 
 kyo_effect_decl: 
     | EFFECT name=located(IDENT) polymorp_vars=generics(kyo_ky_polymorphic) signatures=delimited(LBRACE, list(kyo_effect_sig) ,RBRACE) {
@@ -97,23 +142,23 @@ kyo_type:
     | kyo_ky_polymorphic {
         TyPolymorphic $1
     }
-    | REF delimited(INF, located(kyo_type) , SUP) {
+    | REF parenthesis(located(kyo_type)) {
         TRef $2
     }
-    | delimited(LPARENT, separated_list(located(kyo_type)) , RPARENT) {
+    | delimited(LPARENT, separated_list(COMMA, located(kyo_type)) , RPARENT) {
         match $1 with
         | [] -> TUnit
         | t::[] -> t.value
         | list -> TTuple list
     }
      
-    | module_resolver=module_resolver name=IDENT parametrics_type=generics(kyo_type) {
+    | module_resolver=module_resolver name=located(IDENT) parametrics_type=generics(kyo_type) {
         match parametrics_type with
         | [] ->
             let ktype = match module_resolver with
                 | _::_ -> TyIdentifier { module_resolver; name }
                 | [] -> begin 
-                    match name with
+                    match name.value with
                     | "char" -> TChar
                     | "bool" -> TBool
                     | "unit" -> TUnit
