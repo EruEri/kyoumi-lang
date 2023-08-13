@@ -1,0 +1,11 @@
+(ocamllex
+ (modules kyoumiLexer))
+
+(menhir
+ (modules kyoumiParser)
+ (flags --table --explain)
+ (infer true))
+
+(library
+ (name kyoumiFrontend)
+ (libraries util menhirLib))
