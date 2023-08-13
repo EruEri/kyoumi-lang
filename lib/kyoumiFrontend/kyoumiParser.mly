@@ -17,7 +17,7 @@
 %token WILDCARD
 %token WHILE MATCH VAL
 %token COLON SEMICOLON DOUBLECOLON
-%token  COMMA
+%token COMMA
 
 %start kyo_module
 
@@ -46,8 +46,8 @@
     }
 
 %inline signature:
-    | delimited(LPARENT, located(kyo_type) ,RPARENT) COLON located(kyo_type) {
-
+    | delimited(LPARENT, located(kyo_type), RPARENT) COLON located(kyo_type) {
+        ($1, $3)
     }
 
 kyo_module:
@@ -64,14 +64,38 @@ kyo_node:
 
 
 kyo_effect_decl: 
-    | EFFECT IDENT generics delimited(LBRACE, , RBRACE)
+    | EFFECT name=located(IDENT) polymorp_vars=generics(kyo_ky_polymorphic) signatures=delimited(LBRACE, list(kyo_effect_sig) ,RBRACE) {
+       {
+        name;
+        polymorp_vars;
+        signatures
+       } 
+    }
 
-kyo_effect:
-    | 
+kyo_effect_sig:
+    | VAL name=located(IDENT) COLON effect_type=located(kyo_type) {
+        KEffVal {
+            name;
+            effect_type 
+        } 
+    }
+    | FUNCTION name=located(IDENT) sign=signature {
+        let effect_sig_param, effect_sig_return_type = sign in
+        KEffSig {
+            name;
+            effect_sig_param;
+            effect_sig_return_type
+        }
+    }
+
+%inline kyo_ky_polymorphic:
+    | located(PolymorphicVar) { 
+        KyTyPolymorphic $1
+    }
 
 kyo_type:
-    | located(PolymorphicVar) {
-        TyPolymorphic (KyTyPolymorphic $1)
+    | kyo_ky_polymorphic {
+        TyPolymorphic $1
     }
     | REF delimited(INF, located(kyo_type) , SUP) {
         TRef $2
@@ -82,7 +106,7 @@ kyo_type:
         | t::[] -> t.value
         | list -> TTuple list
     }
-    | FUNCTION 
+     
     | module_resolver=module_resolver name=IDENT parametrics_type=generics(kyo_type) {
         match parametrics_type with
         | [] ->

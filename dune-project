@@ -1,4 +1,4 @@
-(lang dune 3.10)
+(lang dune 3.9)
 
 (using menhir 2.1)
 
@@ -7,13 +7,13 @@
 (generate_opam_files true)
 
 (source
- (github username/reponame))
+ (github EruEri/kyoumi-lang))
 
-(authors "Author Name")
+(authors "EruEri")
 
-(maintainers "Maintainer Name")
+(maintainers "EruEri")
 
-(license LICENSE)
+(license GPL-3.0)
 
 (documentation https://url/to/documentation)
 

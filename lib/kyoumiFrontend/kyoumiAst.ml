@@ -43,7 +43,7 @@ module KyoType = struct
     *)
     | EfType of {
       effect_name: string location;
-      ef_parametric_type: kyo_type location list
+      eff_parametric_type: kyo_type location list
     }
     (*
       (ask<int> & raise) list<int>
@@ -74,13 +74,14 @@ module KNodeEffect = struct
 
   type effect_signature = 
   | KEffVal of effect_value
-  | KeffFunction of effect_function
+  | KEffSig of effect_function
 
 
   type effect_declaration = {
-  name: string location;
-  generics: string location list;
-}
+    name: string location;
+    polymorp_vars: KyoType.kyo_type_polymorphic location list;
+    signatures: effect_signature list
+  }
 end
 
 module KNodeEnum = struct
