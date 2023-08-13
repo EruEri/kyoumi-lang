@@ -1,1 +1,2 @@
-module KyoumiAst = KyoumiAst
+module Ast = KyoumiAst
+module Error = KyoumiError

@@ -1,14 +1,17 @@
 {
     open Lexing
     open KyoumiParser
+    open KyoumiError
 
     let lkeywords = 
     [
-        ("and", FULLAND); ("as", AS); ("effect", EFFECT); ("external", EXTERNAL); ("eq", CMP_EQUAL); ("false", FALSE); ("fn", FUNCTION); ("fun", ANON_FUNCTION);
-        ("gt", CMP_GREATER); ("lt", CMP_LESS); ("let", LET); ("match", ); ("true", TRUE); ("type", TYPE);
-        ("val", VAL);("while", WHILE);
+        ("as", AS); ("effect", EFFECT); ("external", EXTERNAL); ("eq", CMP_EQUAL); ("false", FALSE); ("fn", FUNCTION); ("fun", ANON_FUNCTION);
+        ("gt", CMP_GREATER); ("lt", CMP_LESS); ("let", LET); ("match", MATCH); ("true", TRUE); ("type", TYPE);
+        ("val", VAL);("while", WHILE)
     ]
     let keywords = Hashtbl.of_seq @@ List.to_seq lkeywords
+
+    let current_position = Util.Position.current_position
 }
 
 let digit = ['0'-'9']
@@ -28,6 +31,10 @@ let hexa_char = '\\' 'x' (digit | ['a'-'f'] | ['A'-'F']) (digit | ['a'-'f'] | ['
 let newline = ('\010' | '\013' | "\013\010")
 let blank   = [' ' '\009' '\012']
 let whitespace = [' ' '\t' '\r' '\n']+
+let infix_symbol = ['|' '=' '<' '>' '^' '&' '+' '-' '*' '/' '$' '%' '~']
+let prefix_symbol = [ '!' '?']
+let operator_symbol = ['|' '=' '<' '>' '^' '&' '+' '-' '*' '/' '$' '%' '~' '!' '?']
+
 
 rule token = parse
 | newline {
@@ -52,18 +59,15 @@ rule token = parse
     polymorphic_var lexbuf
 }
 | "@" { built_in_function lexbuf }
-| "=" { EQUAL }
-| "&"  { AMPERSAND }
-| "&&" { AND }
-| "||" { OR }
-| "|>" { PIPESUP }
-| "==" { DOUBLEQUAL }
-| "<=>" { INF_EQ_SUP }
-| "!=" { DIF }
-| "+" { PLUS }
-| "-" { MINUS }
-| "*" { MULT } 
-| "/" { DIV }
+| (infix_symbol as i) (operator_symbol* as os) as all {
+    match i with
+    | '|' when os = String.empty -> PIPE
+    | '|' -> OP_REPR_PIPE all
+    | '&' when os = String.empty -> AMPERSAND
+    | '&' -> OP_REPR_AMPERSAND all
+    | _ -> failwith ""
+
+}
 | "[" { LSQBRACE }
 | "]" { RSQBRACE }
 | (float_literal as f) {
@@ -78,14 +82,73 @@ rule token = parse
     with Not_found -> IDENT s
 }
 | (number as n) {
-    Integer_lit (Int.of_string n)
+    Integer_lit (int_of_string n)
 }
 | eof { EOF }
-rule polymorphic_var = parse
+and polymorphic_var = parse
 | lower_identifier as s {
     PolymorphicVar s
 }
-rule polymorphic_eff = parse
+and polymorphic_eff = parse
 | lower_identifier as s {
     PolymorphicEff s
 }
+and read_string buffer = parse
+| '"' { String_lit (Buffer.contents buffer) }
+| (hexa_char as s) {
+    let s_len = String.length s in
+    let s_number = String.sub s 1 (s_len - 1) in
+    let code =  int_of_string ("0" ^  s_number) in
+    let char = Char.chr code in
+    let escaped = char |> Printf.sprintf "%c" |> String.escaped in
+    let () = Buffer.add_string buffer escaped in 
+    read_string buffer lexbuf 
+}
+| '\\' ( escaped_char as c ){ 
+    let () = if c = '\\' then () else Buffer.add_char buffer '\\' in
+    let () = Buffer.add_char buffer c in
+    read_string buffer lexbuf 
+}
+| '\\' { 
+    let le = Unexpected_escaped_char ((current_position lexbuf) , ( lexeme lexbuf) ) in
+    raise @@ raw_lexer_error @@ le  
+}
+
+| _ as c { 
+    if c = '\n' then 
+        let () = Lexing.new_line lexbuf in
+        read_string buffer lexbuf
+    else
+        let () = Buffer.add_char buffer c in
+        read_string buffer lexbuf 
+}
+| eof {
+    raise @@ raw_lexer_error @@ Unclosed_string (current_position lexbuf)
+}
+and single_line_comment = parse
+| newline {  
+    let () = Lexing.new_line lexbuf in
+    token lexbuf 
+}
+| _ { single_line_comment lexbuf}
+| eof { EOF }
+and multiple_line_comment = parse 
+| "*/" { token lexbuf }
+| newline { 
+    let () = Lexing.new_line lexbuf in
+    multiple_line_comment lexbuf
+}
+| _ { multiple_line_comment lexbuf }
+| eof {
+    raise @@ raw_lexer_error @@ Unclosed_comment (current_position lexbuf)
+}
+and built_in_function = parse
+| identifiant as s {
+    match Hashtbl.find_opt keywords s with
+    | None -> BUILTIN s
+    | Some _ -> (Invalid_keyword_for_build_in_function ((current_position lexbuf) , s) |> raw_lexer_error |> raise )
+}
+| _ as lit {
+     (Invalid_litteral_for_build_in_function ( current_position lexbuf ,lit)  |> raw_lexer_error |> raise )
+}
+| eof {  Not_finished_built_in_function (current_position lexbuf)  |> raw_lexer_error |> raise }

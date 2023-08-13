@@ -10,16 +10,24 @@
 %token <string> PolymorphicVar
 %token <string> PolymorphicEff
 %token <string> Module_IDENT
+%token <string> String_lit
 %token <float> Float_lit
 %token <int> Integer_lit
+%token <string> BUILTIN
+%token <string> OP_REPR_PIPE
+%token <string> OP_REPR_AMPERSAND
+%token <string> OP_REPR_EQUAL
 %token EFFECT TYPE EXTERNAL FUNCTION ANON_FUNCTION LET AS
+%token CMP_LESS CMP_EQUAL CMP_GREATER
+%token TRUE FALSE
+%token LSQBRACE RSQBRACE
 %token LBRACE RBRACE
 %token LPARENT RPARENT
 %token WILDCARD
 %token WHILE MATCH VAL
 %token REF
 %token COLON SEMICOLON DOUBLECOLON EQUAL
-%token PIPE DOT
+%token PIPE DOT AMPERSAND
 %token COMMA
 %token EOF
 
