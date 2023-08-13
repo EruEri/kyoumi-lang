@@ -134,4 +134,3 @@ type kyo_node =
 | KNGlobal of global_declaration
 
 type kyo_module = kyo_node list
-

@@ -62,11 +62,35 @@ rule token = parse
 | (infix_symbol as i) (operator_symbol* as os) as all {
     match i with
     | '|' when os = String.empty -> PIPE
-    | '|' -> OP_REPR_PIPE all
     | '&' when os = String.empty -> AMPERSAND
-    | '&' -> OP_REPR_AMPERSAND all
-    | _ -> failwith ""
+    | '=' when os = String.empty -> EQUAL
+    | '=' when all = "=>" -> EQUAL_SUP
+    | '-' when all = "->" -> MINUS_SUP
+    | '/' when all = "//" -> single_line_comment lexbuf
+    | '/' when all = "/*" ->
+        multiple_line_comment lexbuf
+    | '|' -> INFIX_PIPE all
+    | '&' -> INFIX_AMPERSAND all
+    | '=' -> INFIX_EQUAL all
+    | '<' -> INFIX_INF all 
+    | '>' -> INFIX_SUP all
+    | '^' -> INFIX_CARET all
+    | '+' -> INFIX_PLUS all
+    | '-' -> INFIX_MINUS all
+    | '*' -> INFIX_MULT all
+    | '/' -> INFIX_DIV all
+    | '$' -> INFIX_DOLLAR all
+    | '%' -> INFIX_PERCENT all
+    | '~' -> INFIX_TILDE all
+    | _ -> failwith "Unreachable: no other infix characters"
 
+}
+| (prefix_symbol as i) (operator_symbol* as os) as all {
+    let () = ignore os in
+    match i with
+    | '!' -> PREFIX_EXCLA all
+    | '?' -> PREFIX_QUESTIONMARK all
+     | _ -> failwith "Unreachable: no other prefix characters"
 }
 | "[" { LSQBRACE }
 | "]" { RSQBRACE }

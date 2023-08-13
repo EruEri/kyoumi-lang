@@ -14,9 +14,22 @@
 %token <float> Float_lit
 %token <int> Integer_lit
 %token <string> BUILTIN
-%token <string> OP_REPR_PIPE
-%token <string> OP_REPR_AMPERSAND
-%token <string> OP_REPR_EQUAL
+%token <string> INFIX_PIPE
+%token <string> INFIX_AMPERSAND
+%token <string> INFIX_EQUAL
+%token <string> INFIX_INF
+%token <string> INFIX_SUP
+%token <string> INFIX_CARET (* ^ *)
+%token <string> INFIX_PLUS
+%token <string> INFIX_MINUS
+%token <string> INFIX_MULT
+%token <string> INFIX_DIV
+%token <string> INFIX_DOLLAR
+%token <string> INFIX_PERCENT
+%token <string> INFIX_TILDE
+%token <string> PREFIX_EXCLA
+%token <string> PREFIX_QUESTIONMARK
+%token MINUS_SUP EQUAL_SUP
 %token EFFECT TYPE EXTERNAL FUNCTION ANON_FUNCTION LET AS
 %token CMP_LESS CMP_EQUAL CMP_GREATER
 %token TRUE FALSE
