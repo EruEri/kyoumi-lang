@@ -52,8 +52,47 @@ module KyoType = struct
 end
 
 module KExpresssion = struct
-  type kyo_expression = 
-  |
+  type kyo_pattern =
+  | PTrue
+  | PFalse
+  | PEmpty
+  | PCmpLess
+  | PCmpEqual
+  | PCmpGreater
+  | PNullptr
+  | PWildcard
+  | PFloat of float location
+  (* | PChar of char location *)
+  | PInteger of int location
+  | PIdentifier of string location
+  | PTuple of kyo_pattern location list
+  | PCase of {
+      variant : string location;
+      assoc_patterns : kyo_pattern location list;
+    }
+  | PRecord of {
+    module_resolver: string location location;
+    pfields : (string location * kyo_pattern location) list
+    }
+  | POr of kyo_pattern location list
+  | PTyped of {
+    ptype: KyoType.kyo_type location;
+    pattern: kyo_pattern location
+  }
+  type kyo_declaration = {
+    kd_pattern: kyo_pattern location;
+    expression: kyo_expression location
+  }
+  and kyo_expression = 
+  | EUnit
+  | EIdentifier of string location
+  | EInteger of int location
+  | EDeclaration of kyo_declaration * (kyo_expression location)
+  | EAnonFunction of {
+    parameters: kyo_pattern location list;
+    body: kyo_expression location
+  }
+  | ETuple of kyo_expression location list
 end
 
 

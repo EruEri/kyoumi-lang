@@ -4,6 +4,7 @@
     open KyoumiAst
     open KyoumiAst.KyoType
     open KyoumiAst.KNodeEffect
+    open KyoumiAst.KExpresssion
 %}
 
 %token <string> IDENT
@@ -80,6 +81,28 @@
     | delimited(LPARENT, separated_list(COMMA, located(kyo_type)) , RPARENT) COLON located(kyo_type) {
         ($1, $3)
     }
+    
+
+%inline operator:
+    | INFIX_PIPE
+    | INFIX_AMPERSAND
+    | INFIX_EQUAL
+    | INFIX_INF
+    | INFIX_SUP
+    | INFIX_CARET (* ^ *)
+    | INFIX_PLUS
+    | INFIX_MINUS
+    | INFIX_MULT
+    | INFIX_DIV
+    | INFIX_DOLLAR
+    | INFIX_PERCENT
+    | INFIX_TILDE
+    | PREFIX_EXCLA
+    | PREFIX_QUESTIONMARK { $1 }
+
+%inline loc_var_identifier:
+    | located(IDENT)
+    | parenthesis(located(operator)) { $1 }
 
 kyo_module:
     | nodes = list(kyo_node) EOF { nodes }
@@ -91,6 +114,65 @@ kyo_node:
     | kyo_function_decl { KNFunction $1 }
     | kyo_global_decl { KNGlobal $1 }
 
+kyo_pattern:
+    | TRUE { PTrue }
+    | FALSE { PFalse }
+    | CMP_LESS { PCmpLess }
+    | CMP_EQUAL { PCmpEqual }
+    | CMP_GREATER { PCmpGreater }
+    | WILDCARD { PWildcard }
+    | located(Float_lit) {
+        PFloat $1
+    }
+    // | located(Char_lit) { 
+    //     PChar $1
+    // }
+    | located(Integer_lit) {
+        PInteger $1
+    }
+    | loc_var_identifier {
+        PIdentifier $1
+    }
+    | parenthesis(separated_list(COMMA, located(kyo_pattern))) {
+        match $1 with
+        | [] -> PEmpty
+        | p::[] -> p.value
+        | list -> PTuple list
+    }
+    | DOT located(IDENT) loption(delimited(LPARENT, separated_nonempty_list(COMMA, located(kyo_pattern)) ,RPARENT))  {
+        PCase {
+            variant = $2;
+            assoc_patterns = $3
+        }
+    }
+    | lpattern=located(kyo_pattern) PIPE rpattern=located(kyo_pattern) {
+        let lpattern = KyoumiUtil.Pattern.flatten_por lpattern in
+        let rpattern = KyoumiUtil.Pattern.flatten_por rpattern in
+        let patterns = lpattern @ rpattern in
+        POr patterns
+    }
+    | parenthesis(pattern=located(kyo_pattern) COLON ptype=located(kyo_type) {pattern, ptype}) {
+        let open KyoumiAst.KExpresssion in
+        let pattern, ptype = $1 in
+        PTyped {ptype; pattern}
+    } 
+
+kyo_expr:
+    | loc_var_identifier { EIdentifier $1 }
+    | located(Integer_lit) { EInteger $1 }
+    | LET kd_pattern=located(kyo_pattern) EQUAL expression=located(kyo_expr) SEMICOLON next=located(kyo_expr) {
+        let decl = {kd_pattern; expression} in
+        EDeclaration (decl, next)
+    }
+    | ANON_FUNCTION parameters=parenthesis(separated_list(COMMA, located(kyo_pattern))) MINUS_SUP body=located(kyo_expr) {
+        EAnonFunction {parameters; body}
+    }
+    | parenthesis(separated_list(COMMA, located(kyo_expr)) ) {
+        match $1 with
+        | [] -> EUnit
+        | t::[] -> t.value
+        | list -> ETuple list
+    }
 
 kyo_function_decl:
     | FUNCTION { failwith "TODO: kyo_function_decl" }
@@ -99,7 +181,7 @@ kyo_external_decl:
     | EXTERNAL { failwith "TODO: kyo_external_decl" }
 
 kyo_global_decl:
-    | LET { failwith "TODO: kyo_global_decl" }
+    | LET loc_var_identifier EQUAL located(kyo_expr) { failwith "TODO: kyo_global_decl" }
 
 kyo_type_decl:
     | TYPE record_name=located(IDENT) polymorp_vars=generics(kyo_ky_polymorphic) EQUAL fields=kyo_record_decl {

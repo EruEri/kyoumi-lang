@@ -13,15 +13,26 @@ type struct('a) = {
     s: string
 }
 
-external print(int, string) : bool = ""
+external print(int, string) : _ bool = ""
 
+fun (10 | _) -> 10
+
+let x = fun () -> 10 in
+x()
+let m = map(x) by fun n -> n + 1;
+match t {
+    .some(_)
+    _
+    ask { }
+    x
+}
 
 let (+) = 
     let d = 10;
     fun x y -> 
 
 
-fn ask<'a>() : (ask<'a>) option<'a> =
+fn ask(x: int, x: 'a) : (ask<'a>) option<'a> =
     let x = perform();
 
 let x = @array(1, 2, 4, 8)
