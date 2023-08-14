@@ -160,8 +160,8 @@ kyo_pattern:
 kyo_expr:
     | loc_var_identifier { EIdentifier $1 }
     | located(Integer_lit) { EInteger $1 }
-    | LET kd_pattern=located(kyo_pattern) EQUAL expression=located(kyo_expr) SEMICOLON next=located(kyo_expr) {
-        let decl = {kd_pattern; expression} in
+    | LET kd_pattern=located(kyo_pattern) explicit_type=option(preceded(COLON, located(kyo_type))) EQUAL expression=located(kyo_expr) SEMICOLON next=located(kyo_expr) {
+        let decl = {kd_pattern; explicit_type; expression} in
         EDeclaration (decl, next)
     }
     | ANON_FUNCTION parameters=parenthesis(separated_list(COMMA, located(kyo_pattern))) MINUS_SUP body=located(kyo_expr) {

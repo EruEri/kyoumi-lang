@@ -81,6 +81,7 @@ module KExpresssion = struct
   }
   type kyo_declaration = {
     kd_pattern: kyo_pattern location;
+    explicit_type: KyoType.kyo_type location option;
     expression: kyo_expression location
   }
   and kyo_expression = 
