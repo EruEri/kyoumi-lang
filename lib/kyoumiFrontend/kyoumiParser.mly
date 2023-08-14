@@ -46,6 +46,7 @@
 %token COMMA
 %token EOF
 
+
 %left PIPE
 
 %start kyo_module
@@ -172,18 +173,14 @@ kyo_pattern_branch:
         $1 |> List.map @@ fun name -> KyEffHandler name
     }
 
-%inline kyo_trailing_closure:
-    | kyo_anon_function END {
-        $1
-    }
 
 %inline kyo_anon_function:
-    | ANON_FUNCTION parameters=parenthesis(separated_list(COMMA, located(kyo_pattern))) MINUS_SUP body=located(kyo_expression) {
+    | ANON_FUNCTION parameters=parenthesis(separated_list(COMMA, located(kyo_pattern))) MINUS_SUP body=located(kyo_expression) END {
         EAnonFunction {parameters; body}
     }
 
 %inline kyo_function_call_spe:
-    | parameters=parenthesis(separated_list(COMMA, located(kyo_expression))) trailing_clo=option(located(kyo_trailing_closure)) handlers=loption(kyo_eff_handler_param)  {
+    | parameters=parenthesis(separated_list(COMMA, located(kyo_expression))) trailing_clo=option(located(kyo_anon_function)) handlers=loption(kyo_eff_handler_param)  {
         let parameters = match trailing_clo with
             | None -> parameters
             | Some p -> parameters @ [p]
@@ -209,11 +206,14 @@ kyo_pathed_expression:
         | Some (parameters, handlers) -> EFunctionCall {module_resolver; function_name = name; parameters; handlers}
     }
     | module_resolver=module_resolver name=located(IDENT) DOT fields=bracketed(trailing_separated_list(COMMA, kyo_expr_record_line)) {
-        EStruct {module_resolver; name; fields}
+        ERecord {module_resolver; name; fields}
     }
     | module_resolver=module_resolver DOT name=located(IDENT) assoc_exprs=loption(parenthesis(separated_nonempty_list(COMMA, located(kyo_expression)))) {
         EEnum {module_resolver; name; assoc_exprs}
     }
+
+kyo_handler:
+    | HANDLER { failwith "" }
 
 kyo_expression:
     | kyo_pathed_expression { $1 }
@@ -227,6 +227,9 @@ kyo_expression:
         let decl = {kd_pattern; explicit_type; expression} in
         EDeclaration (decl, next)
     }
+    // | expr=located(kyo_expression) DOT field=located(IDENT) {
+    //     ERecordAccess { expr; field }
+    // }
     | parenthesis(separated_list(COMMA, located(kyo_expression)) ) {
         match $1 with
         | [] -> EUnit

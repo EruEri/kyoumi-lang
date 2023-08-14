@@ -55,8 +55,8 @@ type coordinate = {
 }
 
 fn main() : (io & exn & out_mem) int = 
-    let x = coordinate.{ x, y};
-    let handler = handler ask<int> {
+    let x = coordinate.{ x, y };
+    let handler = handler ask.{
         let default = 10;
         fn ask(x: int, y : int) = x + y;
     }
