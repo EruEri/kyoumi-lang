@@ -1,6 +1,5 @@
 effect ask('a) {
     val default : int
-    fn ask() : 'a
     fn ask(int, int) : 'a
 }
 
@@ -19,7 +18,7 @@ fun (10 | _) -> 10
 
 let x = fun () -> 10 in
 x()
-let m = map(x) by fun n -> n + 1;
+let m = map(x) fun n -> n + 1;
 match t {
     .some(_)
     _
@@ -27,9 +26,10 @@ match t {
     x
 }
 
-let (+) = 
-    let d = 10;
-    fun x y -> 
+
+external `+`(int, int) : int = "kyoumi_int_add"
+external `-`(int, int) : int = "kyoumi_int_minus
+external ! ()
 
 
 fn ask(x: int, x: 'a) : (ask<'a>) option<'a> =
@@ -38,17 +38,35 @@ fn ask(x: int, x: 'a) : (ask<'a>) option<'a> =
 let x = @array(1, 2, 4, 8)
 ley y = 1::2::[]
     
-fn map<'a, 'b>(l: list<'a>, mapper: fn('a) -> `a 'b ) : _ list('b) = 
+fn map(l: list<'a>, mapper: fn('a) -> `a 'b ) : `b list('b) = 
     match l {
         | [] -> []
         | t::q -> {}
     }
 
-fn main() : int = 
-    let handler : ask<int> {
+fn dummy() : unit = 
+    let x = map(x) 
+        {  }
+            fold(x) fun 
+
+type coordinate = {
+    x: int,
+    y: int
+}
+
+fn main() : (io & exn & out_mem) int = 
+    let x = coordinate.{ x, y};
+    let handler = handler ask<int> {
         let default = 10;
-        fn ask() = fun () -> x + y;
+        fn ask(x: int, y : int) = x + y;
     }
+
+    let x = match List.map(x) fun((x, y), d) -> x + 1 end ;
+    let x = 
+
+    let () = &ask.ask();
+
+    let y = Operator.`+`.(10, 20)
 
     let x = ask() with handler ; 
 

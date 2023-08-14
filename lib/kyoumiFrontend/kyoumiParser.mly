@@ -31,19 +31,22 @@
 %token <string> PREFIX_EXCLA
 %token <string> PREFIX_QUESTIONMARK
 %token MINUS_SUP EQUAL_SUP
-%token EFFECT TYPE EXTERNAL FUNCTION ANON_FUNCTION LET AS
+%token BACKTICK
+%token EFFECT TYPE EXTERNAL FUNCTION ANON_FUNCTION LET AS HANDLER 
 %token CMP_LESS CMP_EQUAL CMP_GREATER
 %token TRUE FALSE
 %token LSQBRACE RSQBRACE
 %token LBRACE RBRACE
 %token LPARENT RPARENT
 %token WILDCARD
-%token WHILE MATCH VAL
+%token WHILE MATCH VAL WITH END
 %token REF
 %token COLON SEMICOLON DOUBLECOLON EQUAL
 %token PIPE DOT AMPERSAND
 %token COMMA
 %token EOF
+
+%left PIPE
 
 %start kyo_module
 
@@ -76,6 +79,8 @@
     | loption(parenthesis(separated_nonempty_list(COMMA, located(X)))) {
         $1
     }
+%inline backticked(X):
+    | delimited(BACKTICK, X, BACKTICK) { $1 }
 
 %inline signature:
     | delimited(LPARENT, separated_list(COMMA, located(kyo_type)) , RPARENT) COLON located(kyo_type) {
@@ -102,7 +107,7 @@
 
 %inline loc_var_identifier:
     | located(IDENT)
-    | parenthesis(located(operator)) { $1 }
+    | backticked(located(operator)) { $1 }
 
 kyo_module:
     | nodes = list(kyo_node) EOF { nodes }
@@ -157,21 +162,80 @@ kyo_pattern:
         PTyped {ptype; pattern}
     } 
 
-kyo_expr:
-    | loc_var_identifier { EIdentifier $1 }
+kyo_pattern_branch:
+    | PIPE kpb_pattern=located(kyo_pattern) MINUS_SUP kpb_expr=located(kyo_expression) {
+        {kpb_pattern; kpb_expr}
+    }
+
+%inline kyo_eff_handler_param:
+    | preceded(WITH, separated_nonempty_list(AMPERSAND, loc_var_identifier)) {
+        $1 |> List.map @@ fun name -> KyEffHandler name
+    }
+
+%inline kyo_trailing_closure:
+    | kyo_anon_function END {
+        $1
+    }
+
+%inline kyo_anon_function:
+    | ANON_FUNCTION parameters=parenthesis(separated_list(COMMA, located(kyo_pattern))) MINUS_SUP body=located(kyo_expression) {
+        EAnonFunction {parameters; body}
+    }
+
+%inline kyo_function_call_spe:
+    | parameters=parenthesis(separated_list(COMMA, located(kyo_expression))) trailing_clo=option(located(kyo_trailing_closure)) handlers=loption(kyo_eff_handler_param)  {
+        let parameters = match trailing_clo with
+            | None -> parameters
+            | Some p -> parameters @ [p]
+        in
+        parameters, handlers
+    }
+
+%inline either_COLON_EQUAL:
+    | COLON { () }
+    | EQUAL { () }
+
+%inline kyo_expr_record_line:
+    | located(IDENT) option(preceded(either_COLON_EQUAL, located(kyo_expression))) {
+        let none = $1 |> Position.map @@ fun _ -> EIdentifier {module_resolver = []; name = $1} in
+        let rhs = Option.fold ~none ~some:(Fun.id) $2 in
+        $1, rhs
+    }
+
+kyo_pathed_expression:
+    | module_resolver=module_resolver name=loc_var_identifier fn_spe=option(kyo_function_call_spe) {
+        match fn_spe with
+        | None -> EIdentifier {module_resolver; name}
+        | Some (parameters, handlers) -> EFunctionCall {module_resolver; function_name = name; parameters; handlers}
+    }
+    | module_resolver=module_resolver name=located(IDENT) DOT fields=bracketed(trailing_separated_list(COMMA, kyo_expr_record_line)) {
+        EStruct {module_resolver; name; fields}
+    }
+    | module_resolver=module_resolver DOT name=located(IDENT) assoc_exprs=loption(parenthesis(separated_nonempty_list(COMMA, located(kyo_expression)))) {
+        EEnum {module_resolver; name; assoc_exprs}
+    }
+
+kyo_expression:
+    | kyo_pathed_expression { $1 }
+    | CMP_LESS { ECmpLess }
+    | CMP_EQUAL { ECmpEqual }
+    | CMP_GREATER { ECmpGreater }
     | located(Integer_lit) { EInteger $1 }
-    | LET kd_pattern=located(kyo_pattern) explicit_type=option(preceded(COLON, located(kyo_type))) EQUAL expression=located(kyo_expr) SEMICOLON next=located(kyo_expr) {
+    | located(Float_lit) { EFloat $1 }
+    | located(String_lit) { EString $1 }
+    | LET kd_pattern=located(kyo_pattern) explicit_type=option(preceded(COLON, located(kyo_type))) EQUAL expression=located(kyo_expression) SEMICOLON next=located(kyo_expression) {
         let decl = {kd_pattern; explicit_type; expression} in
         EDeclaration (decl, next)
     }
-    | ANON_FUNCTION parameters=parenthesis(separated_list(COMMA, located(kyo_pattern))) MINUS_SUP body=located(kyo_expr) {
-        EAnonFunction {parameters; body}
-    }
-    | parenthesis(separated_list(COMMA, located(kyo_expr)) ) {
+    | parenthesis(separated_list(COMMA, located(kyo_expression)) ) {
         match $1 with
         | [] -> EUnit
         | t::[] -> t.value
         | list -> ETuple list
+    }
+    | kyo_anon_function { $1 }
+    | MATCH e=located(kyo_expression) ps=bracketed(nonempty_list(kyo_pattern_branch)) {
+        EMatch (e, ps)
     }
 
 kyo_function_decl:
@@ -181,7 +245,7 @@ kyo_external_decl:
     | EXTERNAL { failwith "TODO: kyo_external_decl" }
 
 kyo_global_decl:
-    | LET loc_var_identifier EQUAL located(kyo_expr) { failwith "TODO: kyo_global_decl" }
+    | LET loc_var_identifier EQUAL located(kyo_expression) { failwith "TODO: kyo_global_decl" }
 
 kyo_type_decl:
     | TYPE record_name=located(IDENT) polymorp_vars=generics(kyo_ky_polymorphic) EQUAL fields=kyo_record_decl {

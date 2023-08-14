@@ -5,9 +5,9 @@
 
     let lkeywords = 
     [
-        ("as", AS); ("effect", EFFECT); ("external", EXTERNAL); ("eq", CMP_EQUAL); ("false", FALSE); ("fn", FUNCTION); ("fun", ANON_FUNCTION);
-        ("gt", CMP_GREATER); ("lt", CMP_LESS); ("let", LET); ("match", MATCH); ("true", TRUE); ("type", TYPE);
-        ("val", VAL);("while", WHILE)
+        ("as", AS); ("effect", EFFECT); ("end", END); ("external", EXTERNAL); ("eq", CMP_EQUAL); ("false", FALSE); ("fn", FUNCTION); ("fun", ANON_FUNCTION);
+        ("gt", CMP_GREATER); ("handler", HANDLER ); ("lt", CMP_LESS); ("let", LET); ("match", MATCH); ("true", TRUE); ("type", TYPE);
+        ("val", VAL);("while", WHILE); ("with", WITH)
     ]
     let keywords = Hashtbl.of_seq @@ List.to_seq lkeywords
 
@@ -34,6 +34,7 @@ let whitespace = [' ' '\t' '\r' '\n']+
 let infix_symbol = ['|' '=' '<' '>' '^' '&' '+' '-' '*' '/' '$' '%' '~']
 let prefix_symbol = [ '!' '?']
 let operator_symbol = ['|' '=' '<' '>' '^' '&' '+' '-' '*' '/' '$' '%' '~' '!' '?']
+let not_identifier = [^ 'a'-'z']
 
 
 rule token = parse
@@ -52,6 +53,9 @@ rule token = parse
 | "," { COMMA }
 | "." { DOT }
 | "_" { WILDCARD }
+| "`"  not_identifier {
+    BACKTICK
+}
 | "`" {
     polymorphic_eff lexbuf
  }

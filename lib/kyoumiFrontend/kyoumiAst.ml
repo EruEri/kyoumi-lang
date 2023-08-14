@@ -52,6 +52,9 @@ module KyoType = struct
 end
 
 module KExpresssion = struct
+  type kyo_eff_handler = 
+    (* identifier name *)
+    | KyEffHandler of string location
   type kyo_pattern =
   | PTrue
   | PFalse
@@ -84,15 +87,44 @@ module KExpresssion = struct
     explicit_type: KyoType.kyo_type location option;
     expression: kyo_expression location
   }
+  and kyo_pattern_branch = {
+    kpb_pattern: kyo_pattern location;
+    kpb_expr: kyo_expression location;
+  }
   and kyo_expression = 
   | EUnit
-  | EIdentifier of string location
+  | ECmpLess
+  | ECmpEqual
+  | ECmpGreater
+  | EIdentifier of {
+    module_resolver: string location list;
+    name: string location
+  }
   | EInteger of int location
+  | EFloat of float location
+  | EString of string location
+  | EEnum of {
+    module_resolver: string location list;
+    name: string location;
+    assoc_exprs: kyo_expression location list;
+  }
+  | EStruct of {
+    module_resolver: string location list;
+    name: string location;
+    fields: (string location * kyo_expression location) list
+  }
   | EDeclaration of kyo_declaration * (kyo_expression location)
   | EAnonFunction of {
     parameters: kyo_pattern location list;
     body: kyo_expression location
   }
+  | EFunctionCall of {
+    module_resolver: string location list;
+    function_name: string location;
+    parameters: kyo_expression location list;
+    handlers: kyo_eff_handler list;
+  }
+  | EMatch of kyo_expression location * (kyo_pattern_branch list)
   | ETuple of kyo_expression location list
 end
 
