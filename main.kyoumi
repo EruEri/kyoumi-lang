@@ -26,8 +26,15 @@ match t {
     x
 }
 
+effect dummy {
+    fn d() : `Effect.ask(int)`
 
-external `+`(int, int) : int = "kyoumi_int_add"
+
+    fn h() : (exn & `a) int
+}
+
+
+external `+`(int, int) : total int = "kyoumi_int_add"
 external `-`(int, int) : int = "kyoumi_int_minus
 external ! ()
 

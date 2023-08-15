@@ -48,7 +48,6 @@
 
 
 %left PIPE
-
 %start kyo_module
 
 %type <KyoumiAst.kyo_module> kyo_module
@@ -84,8 +83,8 @@
     | delimited(BACKTICK, X, BACKTICK) { $1 }
 
 %inline signature:
-    | delimited(LPARENT, separated_list(COMMA, located(kyo_type)) , RPARENT) COLON located(kyo_type) {
-        ($1, $3)
+    | parameters=delimited(LPARENT, separated_list(COMMA, located(kyo_type)), RPARENT) COLON effects=located(kyo_effect) return_type=located(kyo_type) {
+        {parameters; return_type; effects}
     }
     
 
@@ -294,18 +293,38 @@ kyo_effect_sig:
             effect_type 
         } 
     }
-    | FUNCTION name=located(IDENT) sign=signature {
-        let effect_sig_param, effect_sig_return_type = sign in
+    | FUNCTION name=located(IDENT) effect_sig=signature {
         KEffSig {
             name;
-            effect_sig_param;
-            effect_sig_return_type
+            effect_sig;
         }
     }
 
 %inline kyo_ky_polymorphic:
     | located(PolymorphicVar) { 
         KyTyPolymorphic $1
+    }
+
+kyo_effect:
+    | located(PolymorphicEff) {
+        KyoType.KyEffPolymorphic $1
+    }
+    | module_resolver=module_resolver effect_name=located(IDENT) {
+        KyoType.KyEffType {
+            module_resolver;
+            effect_name;
+            eff_parametric_type = [];
+        }
+    }
+    | LPARENT module_resolver=module_resolver effect_name=located(IDENT) eff_parametric_type=parenthesis(separated_nonempty_list(COMMA, located(kyo_type))) RPARENT {
+        KyoType.KyEffType {
+            module_resolver;
+            effect_name;
+            eff_parametric_type;
+        }
+    }
+    | parenthesis(separated_nonempty_list(AMPERSAND, located(kyo_effect))) {
+        KyoType.KyEffList $1
     }
 
 kyo_type:
@@ -315,7 +334,10 @@ kyo_type:
     | REF parenthesis(located(kyo_type)) {
         TRef $2
     }
-    | delimited(LPARENT, separated_list(COMMA, located(kyo_type)) , RPARENT) {
+    | FUNCTION signature {
+        TFunction $2
+    }
+    | parenthesis(separated_list(COMMA, located(kyo_type))) {
         match $1 with
         | [] -> TUnit
         | t::[] -> t.value

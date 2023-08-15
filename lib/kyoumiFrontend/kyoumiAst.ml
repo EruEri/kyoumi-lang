@@ -3,7 +3,13 @@ open Util.Position
 module KyoType = struct
   type kyo_type_polymorphic = 
     | KyTyPolymorphic of string location
-  type kyo_type = 
+  type kyo_type_function = 
+  {
+      effects: kyo_effect location;
+      parameters: kyo_type location list;
+      return_type: kyo_type location
+    }
+  and kyo_type = 
     | TyParametricIdentifier of {
       module_resolver: string location list;
       parametrics_type : kyo_type location list;
@@ -16,11 +22,7 @@ module KyoType = struct
     | TyPolymorphic of kyo_type_polymorphic
     | TRef of kyo_type location
     | TTuple of kyo_type location list
-    | TFunction of {
-      effects: kyo_effect location;
-      parameters: kyo_type location list;
-      return_type: kyo_type location
-    }
+    | TFunction of kyo_type_function
     | TArray of { ktype : kyo_type location; size : int64 location }
     | TInteger 
     | TFloat
@@ -30,25 +32,23 @@ module KyoType = struct
     | TBool
     | TChar
     and kyo_effect = 
-    | EfWilcard 
-    | EfContrete of kyo_effect_concrete
-    and kyo_effect_concrete =
     (* `a list<int> *)
-    | EfPolymorphic of string location
+    | KyEffPolymorphic of string location
     (* 
       ask list<int>
       ask<'a, 'b> list<int>
-      ask<'a> list<'a>
-      ask<int> list<string>
+      ask{'a} list<'a>
+      ask(int) list<string>
     *)
-    | EfType of {
+    | KyEffType of {
+      module_resolver: string location list;
       effect_name: string location;
       eff_parametric_type: kyo_type location list
     }
     (*
       (ask<int> & raise) list<int>
     *)
-    | EfList of kyo_effect_concrete location list
+    | KyEffList of kyo_effect location list
 end
 
 module KNodeEnum = struct
@@ -80,9 +80,8 @@ end
 module KnodeExternal = struct
   type external_declaration = {
     sig_name: string location;
-    sig_param: KyoType.kyo_type location list;
-    sig_return_type: KyoType.kyo_type location;
-    sig_external_name: string location
+    sig_external_name: string location;
+    sig_function: KyoType.kyo_type_function;
   }
 end
 
@@ -191,8 +190,7 @@ module KNodeEffect = struct
 
   type effect_function = {
     name: string location;
-    effect_sig_param: KyoType.kyo_type location list;
-    effect_sig_return_type: KyoType.kyo_type location;
+    effect_sig: KyoType.kyo_type_function;
   }
 
   type effect_signature = 
