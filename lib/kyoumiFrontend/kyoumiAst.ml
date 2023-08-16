@@ -67,6 +67,12 @@ module KyoType = struct
       (ask<int> & raise) list<int>
     *)
     | EffList of kyo_effect list
+
+
+    type kyo_type_constraint = {
+      cstr_lhs: kyo_type;
+      cstr_rhs: kyo_type
+    }
 end
 
 module KyoLocType = struct
@@ -300,10 +306,6 @@ module KExpresssion = struct
   | KyEffImplLet of global_declaration
   | KyEffImplFn of function_declaration 
 end
-
-
-
-
 
 type kyo_node = 
 | KNEffect of KNodeEffect.effect_declaration

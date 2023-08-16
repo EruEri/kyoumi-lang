@@ -37,3 +37,17 @@ type lexer_error =
 exception Raw_Lexer_Error of lexer_error
 
 let raw_lexer_error e = Raw_Lexer_Error e
+
+
+
+type kyo_error =
+| UnboundModule of string location list
+
+exception KyoError of kyo_error
+
+let kyo_error e = KyoError e
+
+let unbound_module e = kyo_error @@ UnboundModule e
+
+
+

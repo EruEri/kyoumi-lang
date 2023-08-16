@@ -84,21 +84,22 @@ module KyTypeEffect = struct
       return_type = of_kyoloc_type' return_type
     }
 
-  type kyo_type = KyoumiAst.KyoLocType.kyoloc_type
+  type kyo_type = KyoumiAst.KyoLocType.kyoloc_type 
+end
 
-  (* let rec compare_type lhs rhs = 
-    let open KyoumiAst.KyoType in 
-    match lhs, rhs with
-    | TyParametricIdentifier {module_resolver = lmr; parametrics_type = lpt; name = ln},
-    TyParametricIdentifier {module_resolver = rmr; parametrics_type = rpt; name = rn} ->
-      let module_compare = (Compare.module_resolver_compare, lmr, rmr) in
-      let type_compare = (List.compare compare_type), lpt, rpt in
-      let name_compare = Compare.compare_string, ln, rn in
-     Compare.(mcompare [module_compare; type_compare; name_compare])
-    | _ -> failwith "" *)
+module KyoTypeConstraintSet = Set.Make(struct
+  type t = KyoumiAst.KyoType.kyo_type_constraint
 
+  let compare = Stdlib.compare
+end)
 
-
+module Module = struct
+  let find_module modules kyo_program = 
+    kyo_program 
+    |> List.find_map (fun {filename; kyo_module} ->
+      let name = Util.Convertion.filename_of_module modules in
+      if name = filename then Some kyo_module else None
+    )
 end
 
 module Pattern = struct
