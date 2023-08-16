@@ -65,11 +65,15 @@ type coordinate = {
 }
 
 fn main() : (io & exn & out_mem) int = 
-    let x = coordinate.{ x, y };
-    let handler = handler ask.{
+    let x = coordinate.{ x = 20, y  = 40 } in
+    let handler = handler ask(int).{
         let default = 10;
         fn ask(x: int, y : int) = x + y;
-    }
+    } in
+
+    let open Fs::Open in
+    let open Operator in
+    let open Effect in
 
     let x = List.map(x) fun((x, y), d) -> x + 1 end with handler ;
     let x = 

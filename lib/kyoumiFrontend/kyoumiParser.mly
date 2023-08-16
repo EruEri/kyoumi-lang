@@ -30,7 +30,7 @@
 %token <string> INFIX_TILDE
 %token <string> PREFIX_EXCLA
 %token <string> PREFIX_QUESTIONMARK
-%token MINUS_SUP EQUAL_SUP
+%token MINUS_SUP /*EQUAL_SUP*/
 %token BACKTICK
 %token EFFECT TYPE EXTERNAL FUNCTION ANON_FUNCTION LET AS HANDLER 
 %token CMP_LESS CMP_EQUAL CMP_GREATER
@@ -39,7 +39,7 @@
 %token LBRACE RBRACE
 %token LPARENT RPARENT
 %token WILDCARD
-%token WHILE MATCH VAL WITH END IN
+%token WHILE MATCH VAL WITH END IN OPEN
 %token REF
 %token COLON SEMICOLON DOUBLECOLON EQUAL
 %token PIPE DOT AMPERSAND
@@ -215,8 +215,18 @@ kyo_pathed_expression:
         EEnum {module_resolver; name; assoc_exprs}
     }
 
+%inline kyo_handler_implementation:
+    | kyo_global_decl { KyEffImplLet $1 }
+    | kyo_function_decl { KyEffImplFn $1 }
+
 kyo_handler:
-    | HANDLER { failwith "" }
+    | HANDLER module_resolver=module_resolver effect_name=located(IDENT) DOT effect_impls=bracketed(nonempty_list(kyo_handler_implementation)) { 
+        EHandler {
+            module_resolver;
+            effect_name;
+            effect_impls
+        }
+    }
 
 kyo_expression:
     | kyo_pathed_expression { $1 }
@@ -226,19 +236,26 @@ kyo_expression:
     | located(Integer_lit) { EInteger $1 }
     | located(Float_lit) { EFloat $1 }
     | located(String_lit) { EString $1 }
-    | LET kd_pattern=located(kyo_pattern) explicit_type=option(preceded(COLON, located(kyo_type))) EQUAL expression=located(kyo_expression) SEMICOLON next=located(kyo_expression) {
+    | LET kd_pattern=located(kyo_pattern) explicit_type=option(preceded(COLON, located(kyo_type))) EQUAL expression=located(kyo_expression) IN next=located(kyo_expression) {
         let decl = {kd_pattern; explicit_type; expression} in
         EDeclaration (decl, next)
+    }
+    | LET OPEN module_resolver=separated_nonempty_list(DOUBLECOLON, located(Module_IDENT)) IN next=located(kyo_expression) {
+        EOpen {module_resolver; next}
     }
     // | expr=located(kyo_expression) DOT field=located(IDENT) {
     //     ERecordAccess { expr; field }
     // }
+    | WHILE w_condition=located(kyo_expression) w_body=bracketed(located(kyo_expression)) {
+        EWhile {w_condition; w_body}
+    }
     | parenthesis(separated_list(COMMA, located(kyo_expression)) ) {
         match $1 with
         | [] -> EUnit
         | t::[] -> t.value
         | list -> ETuple list
     }
+    | kyo_handler { $1 }
     | kyo_anon_function { $1 }
     | MATCH e=located(kyo_expression) ps=bracketed(nonempty_list(kyo_pattern_branch)) {
         EMatch (e, ps)
@@ -251,10 +268,10 @@ kyo_expression:
 
 kyo_function_decl:
     | FUNCTION function_name=loc_var_identifier 
-        parameters=parenthesis(separated_list(COMMA,kyo_function_param )) sig_r=signature_return EQUAL body=located(kyo_expression) 
+        fparameters=parenthesis(separated_list(COMMA,kyo_function_param )) sig_r=signature_return EQUAL fbody=located(kyo_expression) 
     { 
-        let return_effect, return_type = sig_r in
-        {function_name; parameters; return_effect; return_type; body}
+        let freturn_effect, freturn_type = sig_r in
+        {function_name; fparameters; freturn_effect; freturn_type; fbody}
     }
 
 kyo_external_decl:
@@ -264,7 +281,9 @@ kyo_external_decl:
     }
 
 kyo_global_decl:
-    | LET loc_var_identifier EQUAL located(kyo_expression) { failwith "TODO: kyo_global_decl" }
+    | LET gvariable_name=loc_var_identifier greturn_type=option(preceded(COLON, located(kyo_type))) EQUAL gbody=located(kyo_expression) { 
+        {gvariable_name; greturn_type; gbody}
+    }
 
 kyo_type_decl:
     | TYPE record_name=located(IDENT) polymorp_vars=generics(kyo_ky_polymorphic) EQUAL fields=kyo_record_decl {

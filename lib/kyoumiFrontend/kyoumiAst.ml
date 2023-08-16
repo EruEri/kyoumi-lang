@@ -90,15 +90,44 @@ module KnodeExternal = struct
   }
 end
 
+module KNodeEffect = struct
+  (**
+    val default : int
+  *)
+  type effect_value = {
+    name: string location;
+    effect_type: KyoType.kyo_type location
+  }
+
+  type effect_function = {
+    name: string location;
+    effect_sig: KyoType.kyo_type_function;
+  }
+
+  type effect_signature = 
+  | KEffVal of effect_value
+  | KEffSig of effect_function
+
+  type effect_declaration = {
+    name: string location;
+    polymorp_vars: KyoType.kyo_type_polymorphic location list;
+    signatures: effect_signature list
+  }
+end
+
 module KExpresssion = struct
   type function_declaration = {
     function_name: string location;
-    parameters: (kyo_pattern location * (KyoType.kyo_type location option)) list;
-    return_effect: KyoType.kyo_effect location;
-    return_type: KyoType.kyo_type location; 
-    body: kyo_expression location;
+    fparameters: (kyo_pattern location * (KyoType.kyo_type location option)) list;
+    freturn_effect: KyoType.kyo_effect location;
+    freturn_type: KyoType.kyo_type location; 
+    fbody: kyo_expression location;
   }
-  and global_declaration
+  and global_declaration = {
+    gvariable_name: string location;
+    greturn_type: KyoType.kyo_type location option;
+    gbody: kyo_expression location;
+  }
   and kyo_eff_value_decl = 
     | KyEffValGlobal of global_declaration
     | KyEffValFunction of function_declaration
@@ -163,6 +192,10 @@ module KExpresssion = struct
     name: string location;
     assoc_exprs: kyo_expression location list;
   }
+  | EOpen of {
+    module_resolver: string location list;
+    next: kyo_expression location
+  }
   | ERecord of {
     module_resolver: string location list;
     name: string location;
@@ -183,37 +216,24 @@ module KExpresssion = struct
     parameters: kyo_expression location list;
     handlers: kyo_eff_handler list;
   }
+  | EHandler of {
+    module_resolver: string location list;
+    effect_name: string location; 
+    effect_impls: kyo_effect_implementation list; 
+  }
+  | EWhile of {
+    w_condition: kyo_expression location;
+    w_body: kyo_expression location
+  }
   | EMatch of kyo_expression location * (kyo_pattern_branch list)
   | ETuple of kyo_expression location list
-  
+  and kyo_effect_implementation = 
+  | KyEffImplLet of global_declaration
+  | KyEffImplFn of function_declaration 
 end
 
 
-module KNodeEffect = struct
-  (**
-    val default : int
-  *)
-  type effect_value = {
-    name: string location;
-    effect_type: KyoType.kyo_type location
-  }
 
-  type effect_function = {
-    name: string location;
-    effect_sig: KyoType.kyo_type_function;
-  }
-
-  type effect_signature = 
-  | KEffVal of effect_value
-  | KEffSig of effect_function
-
-
-  type effect_declaration = {
-    name: string location;
-    polymorp_vars: KyoType.kyo_type_polymorphic location list;
-    signatures: effect_signature list
-  }
-end
 
 
 type kyo_node = 
