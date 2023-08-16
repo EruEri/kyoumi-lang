@@ -16,28 +16,74 @@
 (**********************************************************************************************)
 
 open Util.Position
+open KyoumiAst
 
 
-
-module Compare = struct
-  let mcompare list =
-    match list with
-    | [] -> failwith "No_comparaison"
-    | list -> 
-      list
-      |> List.fold_left (fun acc (fn, lhs, rhs) ->
-        if acc = 0 then fn lhs rhs
-        else acc
-      ) 0
-
-  let compare_string lhs rhs =  
-    String.compare lhs.value rhs.value
-  
-  let module_resolver_compare lhs rhs = 
-    List.compare compare_string lhs rhs
-end
 
 module KyTypeEffect = struct
+
+  let rec of_kyoloc_type = function
+  | KyoLocType.TyLocParametricIdentifier {
+    module_resolver;
+    parametrics_type;
+    name
+  } -> 
+    let parametrics_type = List.map of_kyoloc_type' parametrics_type in
+    let module_resolver = values module_resolver in
+    let name = value name in 
+    KyoType.TyParametricIdentifier {module_resolver; parametrics_type; name}
+  | TyLocIdentifier {
+    module_resolver;
+    name
+  } -> 
+    let module_resolver = values module_resolver in
+    let name = value name in 
+    TyIdentifier {module_resolver; name}
+  | TyLocHandler effects ->
+    let effects = of_kyoloc_effect' effects in
+    TyHandler effects
+  | TyLocPolymorphic kyoloc_type_polymorphic ->
+    TyPolymorphic (of_kyoloc_type_polymorphic kyoloc_type_polymorphic)
+  | TyLocRef kyoloc_type ->
+    TyRef (of_kyoloc_type' kyoloc_type)
+  | TyLocTuple kts ->
+    TyTuple (List.map of_kyoloc_type' kts)
+  | TyLocFunction kyoloc_type_function -> 
+    TyFunction (of_kyoloc_type_function kyoloc_type_function)
+  | TyLocArray { ktype; size } ->
+    TyArray {
+      ktype = of_kyoloc_type' ktype;
+      size = size.value
+    }
+  | TyLocInteger -> TyInteger
+  | TyLocFloat -> TyFloat
+  | TyLocOredered -> TyOredered
+  | TyLocString -> TyString
+  | TyLocUnit -> TyUnit
+  | TyLocBool -> TyBool
+  | TyLocChar -> TyChar
+  and of_kyoloc_type' ky_loc = of_kyoloc_type @@ value ky_loc
+  and of_kyoloc_effect' keff_loc = of_kyoloc_effect @@ value keff_loc
+  and of_kyoloc_effect = function
+  | EffLocPolymorphic s -> 
+    EffPolymorphic s.value
+  | EffLocType {module_resolver; effect_name; eff_parametric_type} ->
+    let eff_parametric_type = List.map of_kyoloc_type' eff_parametric_type in
+    let module_resolver = values module_resolver in
+    let effect_name = value effect_name in 
+    EffType {module_resolver; effect_name; eff_parametric_type}
+  | EffLocList effts -> 
+    EffList (List.map of_kyoloc_effect' effts)
+  and of_kyoloc_type_polymorphic = function
+  | KyLocTyPolymorphic s -> KyoType.KyTyPolymorphic s.value
+  and of_kyoloc_type_function : KyoLocType.kyoloc_type_function -> KyoType.kyo_type_function = function
+  | {effects; parameters; return_type} -> 
+    {
+      effects = of_kyoloc_effect' effects;
+      parameters = List.map of_kyoloc_type' parameters;
+      return_type = of_kyoloc_type' return_type
+    }
+
   type kyo_type = KyoumiAst.KyoLocType.kyoloc_type
 
   (* let rec compare_type lhs rhs = 
