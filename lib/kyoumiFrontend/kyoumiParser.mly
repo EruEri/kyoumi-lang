@@ -19,7 +19,7 @@
 
     open Util
     open KyoumiAst
-    open KyoumiAst.KyoType
+    open KyoumiAst.KyoLocType
     open KyoumiAst.KNodeEffect
     open KyoumiAst.KExpresssion
 %}
@@ -64,7 +64,7 @@
 %token EOF
 
 
-
+%nonassoc AS
 %left INFIX_PLUS
 %left DOT
 %left PIPE
@@ -186,6 +186,12 @@ kyo_pattern:
         let pattern, ptype = $1 in
         PTyped {ptype; pattern}
     } 
+    | pas_pattern=located(kyo_pattern) AS pas_bound=loc_var_identifier {
+        PAs {
+            pas_pattern;
+            pas_bound
+        }
+    }
 
 kyo_pattern_branch:
     | PIPE kpb_pattern=located(kyo_pattern) MINUS_SUP kpb_expr=located(kyo_expression) {
@@ -368,70 +374,70 @@ kyo_effect_sig:
 
 %inline kyo_ky_polymorphic:
     | located(PolymorphicVar) { 
-        KyTyPolymorphic $1
+        KyLocTyPolymorphic $1
     }
 
 kyo_effect:
     | located(PolymorphicEff) {
-        KyoType.KyEffPolymorphic $1
+        EffLocPolymorphic $1
     }
     | module_resolver=module_resolver effect_name=located(IDENT) {
-        KyoType.KyEffType {
+        EffLocType {
             module_resolver;
             effect_name;
             eff_parametric_type = [];
         }
     }
     | LPARENT module_resolver=module_resolver effect_name=located(IDENT) eff_parametric_type=parenthesis(separated_nonempty_list(COMMA, located(kyo_type))) RPARENT {
-        KyoType.KyEffType {
+        EffLocType {
             module_resolver;
             effect_name;
             eff_parametric_type;
         }
     }
     | parenthesis(separated_nonempty_list(AMPERSAND, located(kyo_effect))) {
-        KyoType.KyEffList $1
+        EffLocList $1
     }
 
 kyo_type:
     | kyo_ky_polymorphic {
-        TyPolymorphic $1
+        TyLocPolymorphic $1
     }
     | REF parenthesis(located(kyo_type)) {
-        TRef $2
+        TyLocRef $2
     }
     | HANDLER parenthesis(located(kyo_effect)) {
-        TyHandler $2
+        TyLocHandler $2
     }
     | FUNCTION signature {
-        TFunction $2
+        TyLocFunction $2
     }
     | parenthesis(separated_list(COMMA, located(kyo_type))) {
         match $1 with
-        | [] -> TUnit
+        | [] -> TyLocUnit
         | t::[] -> t.value
-        | list -> TTuple list
+        | list -> TyLocTuple list
     }
      
     | module_resolver=module_resolver name=located(IDENT) parametrics_type=generics(kyo_type) {
         match parametrics_type with
         | [] ->
             let ktype = match module_resolver with
-                | _::_ -> TyIdentifier { module_resolver; name }
+                | _::_ -> TyLocIdentifier { module_resolver; name }
                 | [] -> begin 
                     match name.value with
-                    | "char" -> TChar
-                    | "bool" -> TBool
-                    | "unit" -> TUnit
-                    | "string" -> TString
-                    | "order" -> TOredered
-                    | "int" -> TInteger
-                    | _ -> TyIdentifier { module_resolver; name }
+                    | "char" -> TyLocChar
+                    | "bool" -> TyLocBool
+                    | "unit" -> TyLocUnit
+                    | "string" -> TyLocString
+                    | "order" -> TyLocOredered
+                    | "int" -> TyLocInteger
+                    | _ -> TyLocIdentifier { module_resolver; name }
                 end
             in
             ktype
         | _::_ ->
-            TyParametricIdentifier {
+            TyLocParametricIdentifier {
                 module_resolver;
                 parametrics_type;
                 name

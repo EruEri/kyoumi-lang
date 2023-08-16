@@ -15,52 +15,5 @@
 (*                                                                                            *)
 (**********************************************************************************************)
 
-open Util.Position
-
-
-
-module Compare = struct
-  let mcompare list =
-    match list with
-    | [] -> failwith "No_comparaison"
-    | list -> 
-      list
-      |> List.fold_left (fun acc (fn, lhs, rhs) ->
-        if acc = 0 then fn lhs rhs
-        else acc
-      ) 0
-
-  let compare_string lhs rhs =  
-    String.compare lhs.value rhs.value
-  
-  let module_resolver_compare lhs rhs = 
-    List.compare compare_string lhs rhs
-end
-
-module KyTypeEffect = struct
-  type kyo_type = KyoumiAst.KyoLocType.kyoloc_type
-
-  (* let rec compare_type lhs rhs = 
-    let open KyoumiAst.KyoType in 
-    match lhs, rhs with
-    | TyParametricIdentifier {module_resolver = lmr; parametrics_type = lpt; name = ln},
-    TyParametricIdentifier {module_resolver = rmr; parametrics_type = rpt; name = rn} ->
-      let module_compare = (Compare.module_resolver_compare, lmr, rmr) in
-      let type_compare = (List.compare compare_type), lpt, rpt in
-      let name_compare = Compare.compare_string, ln, rn in
-     Compare.(mcompare [module_compare; type_compare; name_compare])
-    | _ -> failwith "" *)
-
-
-
-end
-
-module Pattern = struct
-  open KyoumiAst.KExpresssion
-  let rec flatten_por pattern =
-    match pattern.value with
-    | POr patterns ->
-        patterns |> List.map flatten_por |> List.flatten
-    | _ ->
-        pattern :: []
-end
+let filename_of_module s = 
+  s |> List.map Position.value |> String.concat Filename.dir_sep

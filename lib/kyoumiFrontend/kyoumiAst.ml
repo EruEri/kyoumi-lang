@@ -17,9 +17,9 @@
 
 open Util.Position
 
-module KyoType = struct
+(* module KyoType = struct
   type kyo_type_polymorphic = 
-    | KyTyPolymorphic of string location
+  | KyTyPolymorphic of string location
   type kyo_type_function = 
     {
       effects: kyo_effect location;
@@ -67,16 +67,68 @@ module KyoType = struct
       (ask<int> & raise) list<int>
     *)
     | KyEffList of kyo_effect location list
+end *)
+
+module KyoLocType = struct
+  type kyoloc_type_polymorphic = 
+    | KyLocTyPolymorphic of string location
+  type kyoloc_type_function = 
+    {
+      effects: kyoloc_effect location;
+      parameters: kyoloc_type location list;
+      return_type: kyoloc_type location
+    }
+  and kyoloc_type = 
+    | TyLocParametricIdentifier of {
+      module_resolver: string location list;
+      parametrics_type : kyoloc_type location list;
+      name: string location
+    }
+    | TyLocIdentifier of {
+      module_resolver: string location list;
+      name: string location
+    }
+    | TyLocHandler of kyoloc_effect location
+    | TyLocPolymorphic of kyoloc_type_polymorphic
+    | TyLocRef of kyoloc_type location
+    | TyLocTuple of kyoloc_type location list
+    | TyLocFunction of kyoloc_type_function
+    | TyLocArray of { ktype : kyoloc_type location; size : int64 location }
+    | TyLocInteger 
+    | TyLocFloat
+    | TyLocOredered
+    | TyLocString
+    | TyLocUnit
+    | TyLocBool
+    | TyLocChar
+    and kyoloc_effect = 
+    (* `a list<int> *)
+    | EffLocPolymorphic of string location
+    (* 
+      ask list<int>
+      ask<'a, 'b> list<int>
+      ask{'a} list<'a>
+      ask(int) list<string>
+    *)
+    | EffLocType of {
+      module_resolver: string location list;
+      effect_name: string location;
+      eff_parametric_type: kyoloc_type location list
+    }
+    (*
+      (ask<int> & raise) list<int>
+    *)
+    | EffLocList of kyoloc_effect location list
 end
 
 module KNodeEnum = struct
   type enum_cases = {
     case_name: string location;
-    assoc_types: KyoType.kyo_type location list
+    assoc_types: KyoLocType.kyoloc_type location list
   }
   type enum_declaration = {
     enum_name: string location;
-    polymorp_vars: KyoType.kyo_type_polymorphic location list;
+    polymorp_vars: KyoLocType.kyoloc_type_polymorphic location list;
     cases: enum_cases list 
   }
 end 
@@ -85,12 +137,12 @@ module KNodeRecord = struct
 
   type record_field = {
     field_name: string location;
-    field_kyotype: KyoType.kyo_type location;
+    field_kyotype: KyoLocType.kyoloc_type location;
   }
 
   type record_declaration = {
     record_name: string location;
-    polymorp_vars: KyoType.kyo_type_polymorphic location list;
+    polymorp_vars: KyoLocType.kyoloc_type_polymorphic location list;
     fields: record_field list
   }
 end
@@ -99,7 +151,7 @@ module KnodeExternal = struct
   type external_declaration = {
     sig_name: string location;
     sig_external_name: string location;
-    sig_function: KyoType.kyo_type_function;
+    sig_function: KyoLocType.kyoloc_type_function;
   }
 end
 
@@ -109,12 +161,12 @@ module KNodeEffect = struct
   *)
   type effect_value = {
     name: string location;
-    effect_type: KyoType.kyo_type location
+    effect_type: KyoLocType.kyoloc_type location
   }
 
   type effect_function = {
     name: string location;
-    effect_sig: KyoType.kyo_type_function;
+    effect_sig: KyoLocType.kyoloc_type_function;
   }
 
   type effect_signature = 
@@ -123,7 +175,7 @@ module KNodeEffect = struct
 
   type effect_declaration = {
     name: string location;
-    polymorp_vars: KyoType.kyo_type_polymorphic location list;
+    polymorp_vars: KyoLocType.kyoloc_type_polymorphic location list;
     signatures: effect_signature list
   }
 end
@@ -131,14 +183,14 @@ end
 module KExpresssion = struct
   type function_declaration = {
     function_name: string location;
-    fparameters: (kyo_pattern location * (KyoType.kyo_type location option)) list;
-    freturn_effect: KyoType.kyo_effect location;
-    freturn_type: KyoType.kyo_type location; 
+    fparameters: (kyoloc_pattern location * (KyoLocType.kyoloc_type location option)) list;
+    freturn_effect: KyoLocType.kyoloc_effect location;
+    freturn_type: KyoLocType.kyoloc_type location; 
     fbody: kyo_expression location;
   }
   and global_declaration = {
     gvariable_name: string location;
-    greturn_type: KyoType.kyo_type location option;
+    greturn_type: KyoLocType.kyoloc_type location option;
     gbody: kyo_expression location;
   }
   and kyo_eff_value_decl = 
@@ -147,7 +199,7 @@ module KExpresssion = struct
   and kyo_eff_handler = 
     (* identifier name *)
     | KyEffHandler of string location
-  and kyo_pattern =
+  and kyoloc_pattern =
   | PTrue
   | PFalse
   | PEmpty
@@ -160,27 +212,31 @@ module KExpresssion = struct
   (* | PChar of char location *)
   | PInteger of int location
   | PIdentifier of string location
-  | PTuple of kyo_pattern location list
+  | PTuple of kyoloc_pattern location list
   | PCase of {
       variant : string location;
-      assoc_patterns : kyo_pattern location list;
+      assoc_patterns : kyoloc_pattern location list;
     }
   | PRecord of {
     module_resolver: string location location;
-    pfields : (string location * kyo_pattern location) list
+    pfields : (string location * kyoloc_pattern location) list
     }
-  | POr of kyo_pattern location list
+  | POr of kyoloc_pattern location list
+  | PAs of {
+    pas_pattern: kyoloc_pattern location;
+    pas_bound: string location;
+  }
   | PTyped of {
-    ptype: KyoType.kyo_type location;
-    pattern: kyo_pattern location
+    ptype: KyoLocType.kyoloc_type location;
+    pattern: kyoloc_pattern location
   }
   and kyo_declaration = {
-    kd_pattern: kyo_pattern location;
-    explicit_type: KyoType.kyo_type location option;
+    kd_pattern: kyoloc_pattern location;
+    explicit_type: KyoLocType.kyoloc_type location option;
     expression: kyo_expression location
   }
   and kyo_pattern_branch = {
-    kpb_pattern: kyo_pattern location;
+    kpb_pattern: kyoloc_pattern location;
     kpb_expr: kyo_expression location;
   }
   and kyo_effect_handler = {
@@ -220,7 +276,7 @@ module KExpresssion = struct
   }
   | EDeclaration of kyo_declaration * (kyo_expression location)
   | EAnonFunction of {
-    parameters: kyo_pattern location list;
+    parameters: kyoloc_pattern location list;
     body: kyo_expression location
   }
   | EFunctionCall of {
@@ -258,3 +314,10 @@ type kyo_node =
 | KNGlobal of KExpresssion.global_declaration
 
 type kyo_module = kyo_node list
+
+type named_kyo_module = {
+  filename: string;
+  kyo_module: kyo_module
+}
+
+type kyo_program = named_kyo_module list
