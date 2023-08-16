@@ -6,7 +6,7 @@
     let lkeywords = 
     [
         ("as", AS); ("effect", EFFECT); ("end", END); ("external", EXTERNAL); ("eq", CMP_EQUAL); ("false", FALSE); ("fn", FUNCTION); ("fun", ANON_FUNCTION);
-        ("gt", CMP_GREATER); ("handler", HANDLER ); ("lt", CMP_LESS); ("let", LET); ("match", MATCH); ("true", TRUE); ("type", TYPE);
+        ("gt", CMP_GREATER); ("handler", HANDLER ); ("in", IN); ("lt", CMP_LESS); ("let", LET); ("match", MATCH); ("true", TRUE); ("type", TYPE);
         ("val", VAL);("while", WHILE); ("with", WITH)
     ]
     let keywords = Hashtbl.of_seq @@ List.to_seq lkeywords

@@ -27,12 +27,15 @@ match t {
 }
 
 effect dummy {
-    fn d() : `Effect.ask(int)`
+    fn d() : (Effect.ask(int)) int
 
 
     fn h() : (exn & `a) int
 }
 
+
+let x =
+    let y = 10 ; y.x.x
 
 external `+`(int, int) : total int = "kyoumi_int_add"
 external `-`(int, int) : int = "kyoumi_int_minus
@@ -40,7 +43,7 @@ external ! ()
 
 
 fn ask(x: int, x: 'a) : (ask<'a>) option<'a> =
-    let x = perform();
+    let x = perform() in
 
 let x = @array(1, 2, 4, 8)
 ley y = 1::2::[]
@@ -68,7 +71,7 @@ fn main() : (io & exn & out_mem) int =
         fn ask(x: int, y : int) = x + y;
     }
 
-    let x = match List.map(x) fun((x, y), d) -> x + 1 end ;
+    let x = List.map(x) fun((x, y), d) -> x + 1 end with handler ;
     let x = 
 
     let () = &ask.ask();

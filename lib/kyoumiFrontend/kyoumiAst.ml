@@ -19,6 +19,11 @@ module KyoType = struct
       module_resolver: string location list;
       name: string location
     }
+    | TyHandler of {
+      module_resolver: string location list;
+      eff_parametrics_type : kyo_type location list;
+      eff_name: string location;
+    }
     | TyPolymorphic of kyo_type_polymorphic
     | TRef of kyo_type location
     | TTuple of kyo_type location list
@@ -86,8 +91,13 @@ module KnodeExternal = struct
 end
 
 module KExpresssion = struct
-  type function_declaration
-
+  type function_declaration = {
+    function_name: string location;
+    parameters: (kyo_pattern location * (KyoType.kyo_type location option)) list;
+    return_effect: KyoType.kyo_effect location;
+    return_type: KyoType.kyo_type location; 
+    body: kyo_expression location;
+  }
   and global_declaration
   and kyo_eff_value_decl = 
     | KyEffValGlobal of global_declaration
@@ -122,7 +132,7 @@ module KExpresssion = struct
     ptype: KyoType.kyo_type location;
     pattern: kyo_pattern location
   }
-  type kyo_declaration = {
+  and kyo_declaration = {
     kd_pattern: kyo_pattern location;
     explicit_type: KyoType.kyo_type location option;
     expression: kyo_expression location

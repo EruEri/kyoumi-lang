@@ -39,7 +39,7 @@
 %token LBRACE RBRACE
 %token LPARENT RPARENT
 %token WILDCARD
-%token WHILE MATCH VAL WITH END
+%token WHILE MATCH VAL WITH END IN
 %token REF
 %token COLON SEMICOLON DOUBLECOLON EQUAL
 %token PIPE DOT AMPERSAND
@@ -82,8 +82,12 @@
 %inline backticked(X):
     | delimited(BACKTICK, X, BACKTICK) { $1 }
 
+%inline signature_return:
+    | COLON effects=located(kyo_effect) return_type=located(kyo_type) {effects, return_type}
+
 %inline signature:
-    | parameters=delimited(LPARENT, separated_list(COMMA, located(kyo_type)), RPARENT) COLON effects=located(kyo_effect) return_type=located(kyo_type) {
+    | parameters=delimited(LPARENT, separated_list(COMMA, located(kyo_type)), RPARENT) sig_r=signature_return {
+        let effects, return_type = sig_r in
         {parameters; return_type; effects}
     }
     
@@ -240,11 +244,24 @@ kyo_expression:
         EMatch (e, ps)
     }
 
+%inline kyo_function_param:
+    | p=located(kyo_pattern) ot=option(preceded(COLON, located(kyo_type))) {
+        p, ot
+    }
+
 kyo_function_decl:
-    | FUNCTION { failwith "TODO: kyo_function_decl" }
+    | FUNCTION function_name=loc_var_identifier 
+        parameters=parenthesis(separated_list(COMMA,kyo_function_param )) sig_r=signature_return EQUAL body=located(kyo_expression) 
+    { 
+        let return_effect, return_type = sig_r in
+        {function_name; parameters; return_effect; return_type; body}
+    }
 
 kyo_external_decl:
-    | EXTERNAL { failwith "TODO: kyo_external_decl" }
+    | EXTERNAL sig_name=loc_var_identifier sig_function=signature EQUAL sig_external_name=located(String_lit) { 
+        let open KnodeExternal in
+        {sig_name; sig_function; sig_external_name}
+    }
 
 kyo_global_decl:
     | LET loc_var_identifier EQUAL located(kyo_expression) { failwith "TODO: kyo_global_decl" }
