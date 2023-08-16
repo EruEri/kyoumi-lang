@@ -1,3 +1,20 @@
+(**********************************************************************************************)
+(*                                                                                            *)
+(* This file is part of Kyoumi                                                                *)
+(* Copyright (C) 2023 Yves Ndiaye                                                             *)
+(*                                                                                            *)
+(* Kyoumi is free software: you can redistribute it and/or modify it under the terms          *)
+(* of the GNU General Public License as published by the Free Software Foundation,            *)
+(* either version 3 of the License, or (at your option) any later version.                    *)
+(*                                                                                            *)
+(* Kyoumi is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;        *)
+(* without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR           *)
+(* PURPOSE.  See the GNU General Public License for more details.                             *)
+(* You should have received a copy of the GNU General Public License along with Kyoumi.       *)
+(* If not, see <http://www.gnu.org/licenses/>.                                                *)
+(*                                                                                            *)
+(**********************************************************************************************)
+
 %{
 
     open Util
@@ -47,7 +64,11 @@
 %token EOF
 
 
+
+%left INFIX_PLUS
+%left DOT
 %left PIPE
+
 %start kyo_module
 
 %type <KyoumiAst.kyo_module> kyo_module
@@ -228,6 +249,7 @@ kyo_handler:
         }
     }
 
+
 kyo_expression:
     | kyo_pathed_expression { $1 }
     | CMP_LESS { ECmpLess }
@@ -236,6 +258,14 @@ kyo_expression:
     | located(Integer_lit) { EInteger $1 }
     | located(Float_lit) { EFloat $1 }
     | located(String_lit) { EString $1 }
+    // | lhs=located(kyo_expression) function_name=located(INFIX_PLUS) rhs=located(kyo_expression) {
+    //     EFunctionCall {
+    //         module_resolver = [];
+    //         function_name;
+    //         parameters = lhs::rhs::[];
+    //         handlers = []
+    //     }
+    // }
     | LET kd_pattern=located(kyo_pattern) explicit_type=option(preceded(COLON, located(kyo_type))) EQUAL expression=located(kyo_expression) IN next=located(kyo_expression) {
         let decl = {kd_pattern; explicit_type; expression} in
         EDeclaration (decl, next)
@@ -243,7 +273,7 @@ kyo_expression:
     | LET OPEN module_resolver=separated_nonempty_list(DOUBLECOLON, located(Module_IDENT)) IN next=located(kyo_expression) {
         EOpen {module_resolver; next}
     }
-    // | expr=located(kyo_expression) DOT field=located(IDENT) {
+    // | expr=located(kyo_pathed_expression) DOT field=located(IDENT) {
     //     ERecordAccess { expr; field }
     // }
     | WHILE w_condition=located(kyo_expression) w_body=bracketed(located(kyo_expression)) {
@@ -369,6 +399,9 @@ kyo_type:
     }
     | REF parenthesis(located(kyo_type)) {
         TRef $2
+    }
+    | HANDLER parenthesis(located(kyo_effect)) {
+        TyHandler $2
     }
     | FUNCTION signature {
         TFunction $2

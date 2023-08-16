@@ -1,10 +1,27 @@
+(**********************************************************************************************)
+(*                                                                                            *)
+(* This file is part of Kyoumi                                                                *)
+(* Copyright (C) 2023 Yves Ndiaye                                                             *)
+(*                                                                                            *)
+(* Kyoumi is free software: you can redistribute it and/or modify it under the terms          *)
+(* of the GNU General Public License as published by the Free Software Foundation,            *)
+(* either version 3 of the License, or (at your option) any later version.                    *)
+(*                                                                                            *)
+(* Kyoumi is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;        *)
+(* without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR           *)
+(* PURPOSE.  See the GNU General Public License for more details.                             *)
+(* You should have received a copy of the GNU General Public License along with Kyoumi.       *)
+(* If not, see <http://www.gnu.org/licenses/>.                                                *)
+(*                                                                                            *)
+(**********************************************************************************************)
+
 open Util.Position
 
 module KyoType = struct
   type kyo_type_polymorphic = 
     | KyTyPolymorphic of string location
   type kyo_type_function = 
-  {
+    {
       effects: kyo_effect location;
       parameters: kyo_type location list;
       return_type: kyo_type location
@@ -19,11 +36,7 @@ module KyoType = struct
       module_resolver: string location list;
       name: string location
     }
-    | TyHandler of {
-      module_resolver: string location list;
-      eff_parametrics_type : kyo_type location list;
-      eff_name: string location;
-    }
+    | TyHandler of kyo_effect location
     | TyPolymorphic of kyo_type_polymorphic
     | TRef of kyo_type location
     | TTuple of kyo_type location list
