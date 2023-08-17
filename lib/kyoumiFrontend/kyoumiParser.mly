@@ -74,7 +74,7 @@
 %left INFIX_MULT INFIX_DIV INFIX_PERCENT
 %nonassoc PREFIX_EXCLA PREFIX_QUESTIONMARK
 
-%left DOT
+%left MINUS_SUP
 
 %start kyo_module
 
@@ -251,9 +251,9 @@ kyo_pathed_expression:
     | module_resolver=module_resolver DOT name=located(IDENT) assoc_exprs=loption(parenthesis(separated_nonempty_list(COMMA, located(kyo_expression)))) {
         EEnum {module_resolver; name; assoc_exprs}
     }
-    // | expr=located(kyo_expression) DOT field=located(IDENT) {
-    //     ERecordAccess { expr; field }
-    // }
+    | expr=located(kyo_expression) MINUS_SUP field=located(IDENT) {
+        ERecordAccess { expr; field }
+    }
 
 %inline kyo_handler_implementation(expr):
     | kyo_global_decl(expr) { KyEffImplLet $1 }

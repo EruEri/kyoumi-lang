@@ -73,7 +73,7 @@ fn main() : (io & exn & out_mem) int =
     // let i = fun(x) -> x end in
     let h = handler ask.{
         let default = 10
-        fn ask(x: int, y : int) : `a int = resume let x = 10 in x
+        fn ask(x: int, y : int) : `a int = let x = 10 in x
     } in
     let p = coordinate.{ x = 10, y = 30 } in
     let o = .some(30) in
@@ -83,8 +83,8 @@ fn main() : (io & exn & out_mem) int =
     // let open Fs::Open in
     let open Operator in
     let open Effect in
-    let shift = coordinate.{x = 10} in
-    let reduce = coordinate.{x = 10}.x /* */
+    let shift = coordinate{x = 10} in
+    let reduce = coordinate.{x = 10}.x.y /* */
     let x = 
         x 
         |> List.map() fun(x) -> x(1) end with h
