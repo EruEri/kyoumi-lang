@@ -16,6 +16,6 @@
 ;**********************************************************************************************;
 
 (executable
- (public_name kyoumi)
- (name kyoumi)
- (libraries ))
+ (public_name kyoumic)
+ (name kyoumic)
+ (libraries kyoumiCli))

@@ -19,3 +19,4 @@ module Ast = KyoumiAst
 module Error = KyoumiError
 module Util = KyoumiUtil
 module Typecheker = KyoumiTypechecker
+module Create = KyoumiCreate

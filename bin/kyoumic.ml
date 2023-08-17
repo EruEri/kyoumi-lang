@@ -15,43 +15,7 @@
 (*                                                                                            *)
 (**********************************************************************************************)
 
-open Util.Position
 
-type lexer_error = 
-  | Forbidden_char of position*char
-  | Unexpected_escaped_char of position*string
-  | Invalid_keyword_for_build_in_function of position*string
-  | Invalid_litteral_for_build_in_function of position*char
-  | Not_finished_built_in_function of position
-  | Unclosed_string of position
-  | Unclosed_comment of position
-  | Char_out_of_range of position * int
-  | Char_Error of position
-  | Syntax_Error of {
-      position: position;
-      current_lexeme: string;
-      message: string;
-      state: int option
-  }
+let code = KyoumiCli.Kyoumic.eval ()
 
-exception Raw_Lexer_Error of lexer_error
-
-let raw_lexer_error e = Raw_Lexer_Error e
-
-
-
-type kyo_error =
-| LexerError of lexer_error
-| UnsuppotedFile of string
-| UnboundModule of string location list
-
-exception KyoError of kyo_error
-
-let kyo_error e = KyoError e
-
-let unbound_module e = kyo_error @@ UnboundModule e
-let unsupported_file e = kyo_error @@ UnsuppotedFile e
-let lexer_error e = kyo_error @@ LexerError e
-
-
-
+let () = exit code

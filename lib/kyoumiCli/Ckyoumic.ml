@@ -15,43 +15,69 @@
 (*                                                                                            *)
 (**********************************************************************************************)
 
-open Util.Position
+open Cmdliner
 
-type lexer_error = 
-  | Forbidden_char of position*char
-  | Unexpected_escaped_char of position*string
-  | Invalid_keyword_for_build_in_function of position*string
-  | Invalid_litteral_for_build_in_function of position*char
-  | Not_finished_built_in_function of position
-  | Unclosed_string of position
-  | Unclosed_comment of position
-  | Char_out_of_range of position * int
-  | Char_Error of position
-  | Syntax_Error of {
-      position: position;
-      current_lexeme: string;
-      message: string;
-      state: int option
-  }
+let name = "kyoumic"
 
-exception Raw_Lexer_Error of lexer_error
-
-let raw_lexer_error e = Raw_Lexer_Error e
+type t = {
+  output: string option;
+  files: string list
+}
 
 
-
-type kyo_error =
-| LexerError of lexer_error
-| UnsuppotedFile of string
-| UnboundModule of string location list
-
-exception KyoError of kyo_error
-
-let kyo_error e = KyoError e
-
-let unbound_module e = kyo_error @@ UnboundModule e
-let unsupported_file e = kyo_error @@ UnsuppotedFile e
-let lexer_error e = kyo_error @@ LexerError e
+let files_term = 
+  Arg.(
+    non_empty
+    & pos_all (non_dir_file) [] 
+    & info [] ~docv:"filename"
+  )
 
 
+let output_term = 
+  Arg.(
+    value
+    & opt (some string) None
+    & info ["o"] ~docv:""
+  )
 
+
+let cmd_term run = 
+  let combine output files = 
+    run @@ {output; files}
+  in
+  Term.(const combine
+    $ output_term
+    $ files_term
+  )
+
+let doc = "The Kyoumi compiler"
+
+let man = [
+  `S Manpage.s_description;
+]
+
+let kyoumic run =
+  let info =
+    Cmd.info ~doc ~man ~version:(Ccommon.version) name
+  in
+  Cmd.v info (cmd_term run) 
+
+
+let run cmd = 
+  let {output; files} = cmd in
+  let `Kyofile kyo_files, `Cfile c_file, `CObjfile cobj_files = match Ccommon.split_file files with
+    | Ok files -> files
+    | Error e -> raise @@ KyoumiFrontend.Error.unsupported_file e 
+  in
+  let kyo_program = 
+    match KyoumiFrontend.Create.kyo_program kyo_files with
+    | Ok kyo_program -> kyo_program
+    | Error lexer -> raise @@ KyoumiFrontend.Error.lexer_error lexer
+  in
+  let () = ignore (output, c_file, cobj_files, kyo_program) in
+  ()
+
+
+let command = kyoumic run
+
+let eval () = Cmd.eval command

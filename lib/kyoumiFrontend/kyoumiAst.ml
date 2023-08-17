@@ -69,6 +69,13 @@ module KyoType = struct
     | EffList of kyo_effect list
 
 
+    type kyo_type_scheme = 
+    | KyTYScheme of {
+      type_vars: kyo_type_polymorphic list;
+      scheme_signature: kyo_type_function
+    }
+
+
     type kyo_type_constraint = {
       cstr_lhs: kyo_type;
       cstr_rhs: kyo_type
@@ -212,7 +219,6 @@ module KExpresssion = struct
   | PCmpLess
   | PCmpEqual
   | PCmpGreater
-  | PNullptr
   | PWildcard
   | PFloat of float location
   (* | PChar of char location *)

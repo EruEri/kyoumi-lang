@@ -23,6 +23,52 @@
  (flags --table --explain)
  (infer true))
 
+ (rule
+ (target new.messages)
+ (deps
+  (:parser kyoumiParser.mly))
+ (action
+  (with-stdout-to
+   %{target}
+   (run menhir %{parser} --base %{parser} --list-errors))))
+
+(rule
+ (target updated.messages)
+ (deps
+  (:parser kyoumiParser.mly)
+  (:msg kyoumiParser.messages))
+ (action
+  (with-stdout-to
+   %{target}
+   (run menhir %{parser} --base %{parser} --update-errors %{msg}))))
+
+(rule
+ (target kyoumiParser.messages.updated)
+ (deps
+  (:parser kyoumiParser.mly)
+  (:new new.messages)
+  (:updated updated.messages))
+ (action
+  (with-stdout-to
+   %{target}
+   (run
+    menhir
+    %{parser}
+    --base
+    %{parser}
+    --merge-errors
+    %{new}
+    --merge-errors
+    %{updated}))))
+
+(rule
+ (targets kyoumiParserMessage.ml)
+ (deps kyoumiParser.messages kyoumiParser.mly)
+ (action
+  (with-stdout-to
+   %{targets}
+   (run menhir --compile-errors %{deps}))))
+
 (library
  (name kyoumiFrontend)
  (libraries util menhirLib))
