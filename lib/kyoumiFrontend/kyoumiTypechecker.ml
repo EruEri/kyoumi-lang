@@ -113,8 +113,8 @@ function
     |> add_constraint ~lhs:b ~rhs:TyUnit
   in
   kyo_env, TyUnit
-| EFunctionCall {module_resolver; function_name; parameters; handlers} ->
-  let () = ignore (module_resolver,function_name, parameters, handlers) in
+| EFunctionCall {e_module_resolver; e_function_name; parameters; handlers} ->
+  let () = ignore (e_module_resolver,e_function_name, parameters, handlers) in
   failwith ""
 | _ -> failwith ""
 and typeof_pattern' scrutinee_type kyo_env pattern = typeof_pattern scrutinee_type kyo_env @@ value pattern

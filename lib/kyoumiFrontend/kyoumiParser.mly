@@ -52,7 +52,7 @@
 %token EFFECT TYPE EXTERNAL FUNCTION ANON_FUNCTION LET AS HANDLER PERFORM RESUME
 %token CMP_LESS CMP_EQUAL CMP_GREATER
 %token TRUE FALSE
-%token LSQBRACE RSQBRACE
+// %token LSQBRACE RSQBRACE
 %token LBRACE RBRACE
 %token LPARENT RPARENT
 %token WILDCARD
@@ -65,9 +65,16 @@
 
 
 %nonassoc AS
-%left INFIX_PLUS
+%nonassoc IN
+%left INFIX_PIPE PIPE
+%left INFIX_AMPERSAND
+%left INFIX_EQUAL INFIX_SUP INFIX_INF INFIX_DOLLAR 
+%left INFIX_CARET INFIX_TILDE
+%left INFIX_PLUS INFIX_MINUS 
+%left INFIX_MULT INFIX_DIV INFIX_PERCENT
+%nonassoc PREFIX_EXCLA PREFIX_QUESTIONMARK
+
 %left DOT
-%left PIPE
 
 %start kyo_module
 
@@ -113,7 +120,7 @@
     }
     
 
-%inline operator:
+%inline infix_operator:
     | INFIX_PIPE
     | INFIX_AMPERSAND
     | INFIX_EQUAL
@@ -126,13 +133,16 @@
     | INFIX_DIV
     | INFIX_DOLLAR
     | INFIX_PERCENT
-    | INFIX_TILDE
+    | INFIX_TILDE { $1 }
+
+%inline prefix_operator:
     | PREFIX_EXCLA
     | PREFIX_QUESTIONMARK { $1 }
 
 %inline loc_var_identifier:
     | located(IDENT)
-    | backticked(located(operator)) { $1 }
+    | located(prefix_operator)
+    | backticked(located(infix_operator)) { $1 }
 
 kyo_module:
     | nodes = list(kyo_node) EOF { nodes }
@@ -232,8 +242,8 @@ kyo_pattern_branch:
 kyo_pathed_expression:
     | module_resolver=module_resolver name=loc_var_identifier fn_spe=option(kyo_function_call_spe) {
         match fn_spe with
-        | None -> EIdentifier {module_resolver; name}
-        | Some (parameters, handlers) -> EFunctionCall {module_resolver; function_name = name; parameters; handlers}
+        | None ->  EIdentifier {module_resolver; name}
+        | Some (parameters, handlers) -> EFunctionCall {e_module_resolver = module_resolver; e_function_name = name; parameters; handlers}
     }
     | module_resolver=module_resolver name=located(IDENT) DOT fields=bracketed(trailing_separated_list(COMMA, kyo_expr_record_line)) {
         ERecord {module_resolver; name; fields}
@@ -241,10 +251,24 @@ kyo_pathed_expression:
     | module_resolver=module_resolver DOT name=located(IDENT) assoc_exprs=loption(parenthesis(separated_nonempty_list(COMMA, located(kyo_expression)))) {
         EEnum {module_resolver; name; assoc_exprs}
     }
+    // | expr=located(kyo_expression) DOT field=located(IDENT) {
+    //     ERecordAccess { expr; field }
+    // }
 
 %inline kyo_handler_implementation(expr):
     | kyo_global_decl(expr) { KyEffImplLet $1 }
     | kyo_function_decl(expr) { KyEffImplFn $1 }
+
+%inline kyo_effect_perform_pefix:
+    | AMPERSAND DOT
+    | PERFORM { () }
+
+%inline kyo_effect_preform:
+    | kyo_effect_perform_pefix module_resolver=module_resolver name=loc_var_identifier fn_spe=option(kyo_function_call_spe) {
+        match fn_spe with
+        | None -> KyPeffIdentifier {module_resolver; name}
+        | Some (parameters, handlers) -> KyPeffFunctionCall {e_module_resolver = module_resolver; e_function_name = name; parameters; handlers} 
+    }
 
 kyo_handler:
     | HANDLER module_resolver=module_resolver effect_name=located(IDENT)  effect_impls=bracketed(nonempty_list(kyo_handler_implementation(kyo_resumable_expression))) { 
@@ -268,14 +292,14 @@ kyo_expression:
     | located(Integer_lit) { EInteger $1 }
     | located(Float_lit) { EFloat $1 }
     | located(String_lit) { EString $1 }
-    // | lhs=located(kyo_expression) function_name=located(INFIX_PLUS) rhs=located(kyo_expression) {
-    //     EFunctionCall {
-    //         module_resolver = [];
-    //         function_name;
-    //         parameters = lhs::rhs::[];
-    //         handlers = []
-    //     }
-    // }
+    | lhs=located(kyo_expression) e_function_name=located(infix_operator) rhs=located(kyo_expression) {
+        EFunctionCall {
+            e_module_resolver = [];
+            e_function_name;
+            parameters = lhs::rhs::[];
+            handlers = []
+        }
+    }
     | LET kd_pattern=located(kyo_pattern) explicit_type=option(preceded(COLON, located(kyo_type))) EQUAL expression=located(kyo_expression) IN next=located(kyo_expression) {
         let decl = {kd_pattern; explicit_type; expression} in
         EDeclaration (decl, next)
@@ -283,9 +307,6 @@ kyo_expression:
     | LET OPEN module_resolver=separated_nonempty_list(DOUBLECOLON, located(Module_IDENT)) IN next=located(kyo_expression) {
         EOpen {module_resolver; next}
     }
-    // | expr=located(kyo_pathed_expression) DOT field=located(IDENT) {
-    //     ERecordAccess { expr; field }
-    // }
     | WHILE w_condition=located(kyo_expression) w_body=bracketed(located(kyo_expression)) {
         EWhile {w_condition; w_body}
     }
@@ -297,6 +318,9 @@ kyo_expression:
     }
     | kyo_handler { $1 }
     | kyo_anon_function { $1 }
+    | kyo_effect_preform {
+        EPerform $1
+    }
     | MATCH e=located(kyo_expression) ps=bracketed(nonempty_list(kyo_pattern_branch)) {
         EMatch (e, ps)
     }

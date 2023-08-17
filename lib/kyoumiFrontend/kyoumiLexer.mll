@@ -70,6 +70,8 @@ rule token = parse
 | "," { COMMA }
 | "." { DOT }
 | "_" { WILDCARD }
+(* | "[" { LSQBRACE }
+| "]" { RSQBRACE } *)
 | "`"  not_identifier {
     BACKTICK
 }
@@ -113,8 +115,6 @@ rule token = parse
     | '?' -> PREFIX_QUESTIONMARK all
     | _ -> failwith "Unreachable: no other prefix characters"
 }
-| "[" { LSQBRACE }
-| "]" { RSQBRACE }
 | (float_literal as f) {
     Float_lit (float_of_string f)
 }

@@ -256,9 +256,21 @@ module KExpresssion = struct
     effect_name: string location;
     effects: kyo_eff_value_decl list
   }
+  and kyo_perform_effect = 
+    | KyPeffIdentifier of {
+      module_resolver: string location list;
+      name : string location
+    }
+    | KyPeffFunctionCall of kyo_expression_function_call
   and kyo_resumable_expression = 
     | KyoExpr of kyo_expression location
     | KyoResumeExpr of kyo_expression location
+  and kyo_expression_function_call = {
+    e_module_resolver: string location list;
+    e_function_name: string location;
+    parameters: kyo_expression location list;
+    handlers: kyo_eff_handler list;
+  }
   and kyo_expression = 
   | EUnit
   | ECmpLess
@@ -294,17 +306,13 @@ module KExpresssion = struct
     parameters: kyoloc_pattern location list;
     body: kyo_expression location
   }
-  | EFunctionCall of {
-    module_resolver: string location list;
-    function_name: string location;
-    parameters: kyo_expression location list;
-    handlers: kyo_eff_handler list;
-  }
+  | EFunctionCall of kyo_expression_function_call
   | EHandler of {
     module_resolver: string location list;
     effect_name: string location; 
     effect_impls: kyo_effect_implementation list; 
   }
+  | EPerform of kyo_perform_effect
   | EWhile of {
     w_condition: kyo_expression location;
     w_body: kyo_expression location
