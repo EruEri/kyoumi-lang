@@ -23,8 +23,8 @@
     let lkeywords = 
     [
         ("as", AS); ("effect", EFFECT); ("end", END); ("external", EXTERNAL); ("eq", CMP_EQUAL); ("false", FALSE); ("fn", FUNCTION); ("fun", ANON_FUNCTION);
-        ("gt", CMP_GREATER); ("handler", HANDLER ); ("in", IN); ("lt", CMP_LESS); ("let", LET); ("match", MATCH); ("open", OPEN); ("true", TRUE); ("type", TYPE);
-        ("val", VAL);("while", WHILE); ("with", WITH)
+        ("gt", CMP_GREATER); ("handler", HANDLER ); ("in", IN); ("lt", CMP_LESS); ("let", LET); ("match", MATCH); ("open", OPEN); ("perform", PERFORM);
+        ("true", TRUE); ("type", TYPE); ("resume", RESUME); ("val", VAL);("while", WHILE); ("with", WITH)
     ]
     let keywords = Hashtbl.of_seq @@ List.to_seq lkeywords
 
@@ -111,7 +111,7 @@ rule token = parse
     match i with
     | '!' -> PREFIX_EXCLA all
     | '?' -> PREFIX_QUESTIONMARK all
-     | _ -> failwith "Unreachable: no other prefix characters"
+    | _ -> failwith "Unreachable: no other prefix characters"
 }
 | "[" { LSQBRACE }
 | "]" { RSQBRACE }

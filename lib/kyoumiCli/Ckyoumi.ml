@@ -17,7 +17,7 @@
 
 open Cmdliner
 
-let name = "kyoumic"
+let name = "kyoumi"
 
 type t = {
   output: string option;
@@ -60,7 +60,7 @@ let kyoumic run =
   let info =
     Cmd.info ~doc ~man ~version:(Ccommon.version) name
   in
-  Cmd.v info (cmd_term run) 
+  Cmd.v info (cmd_term run)
 
 
 let run cmd = 

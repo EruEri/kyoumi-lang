@@ -19,7 +19,7 @@ open Util.Position
 open KyoumiAst.KExpresssion
 open KyoumiError
 
-module KyoNodeConstraintSig : Hashtbl.HashedType = struct
+module KyoNodeConstraintHashedType : Hashtbl.HashedType = struct
   type t = KyoumiAst.kyo_node
 
   (* We can use the physic equality since a node is unique and not recreated *)
@@ -27,6 +27,10 @@ module KyoNodeConstraintSig : Hashtbl.HashedType = struct
 
   let hash : 'a . 'a -> int = Hashtbl.hash
 end
+
+module KyoNodeConstraintHash = Hashtbl.Make(KyoNodeConstraintHashedType)
+(* 
+let kyo_node_constraint = KyoNodeConstraintHash.create 21 *)
 
 module KyoTypeConstraintSet = KyoumiUtil.KyoTypeConstraintSet
 

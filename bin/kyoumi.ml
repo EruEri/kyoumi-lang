@@ -16,6 +16,6 @@
 (**********************************************************************************************)
 
 
-let code = KyoumiCli.Kyoumic.eval ()
+let code = KyoumiCli.Kyoumi.eval ()
 
 let () = exit code

@@ -49,7 +49,7 @@
 %token <string> PREFIX_QUESTIONMARK
 %token MINUS_SUP /*EQUAL_SUP*/
 %token BACKTICK
-%token EFFECT TYPE EXTERNAL FUNCTION ANON_FUNCTION LET AS HANDLER 
+%token EFFECT TYPE EXTERNAL FUNCTION ANON_FUNCTION LET AS HANDLER PERFORM RESUME
 %token CMP_LESS CMP_EQUAL CMP_GREATER
 %token TRUE FALSE
 %token LSQBRACE RSQBRACE
@@ -84,7 +84,7 @@
     | delimited(LPARENT, X, RPARENT) { $1 }
 
 %inline bracketed(X):
-    | delimited(LBRACE, X, RPARENT) { $1 }
+    | delimited(LBRACE, X, RBRACE) { $1 }
 
 %inline module_resolver:
     | mp=loption(terminated(separated_nonempty_list(DOUBLECOLON, located(Module_IDENT)), DOT)) { 
@@ -141,8 +141,8 @@ kyo_node:
     | kyo_effect_decl { KNEffect $1 }
     | kyo_type_decl { $1 }
     | kyo_external_decl { KNExternal $1 }
-    | kyo_function_decl { KNFunction $1 }
-    | kyo_global_decl { KNGlobal $1 }
+    | kyo_function_decl(kyo_expression) { KNFunction $1 }
+    | kyo_global_decl(kyo_expression) { KNGlobal $1 }
 
 kyo_pattern:
     | TRUE { PTrue }
@@ -242,12 +242,12 @@ kyo_pathed_expression:
         EEnum {module_resolver; name; assoc_exprs}
     }
 
-%inline kyo_handler_implementation:
-    | kyo_global_decl { KyEffImplLet $1 }
-    | kyo_function_decl { KyEffImplFn $1 }
+%inline kyo_handler_implementation(expr):
+    | kyo_global_decl(expr) { KyEffImplLet $1 }
+    | kyo_function_decl(expr) { KyEffImplFn $1 }
 
 kyo_handler:
-    | HANDLER module_resolver=module_resolver effect_name=located(IDENT) DOT effect_impls=bracketed(nonempty_list(kyo_handler_implementation)) { 
+    | HANDLER module_resolver=module_resolver effect_name=located(IDENT)  effect_impls=bracketed(nonempty_list(kyo_handler_implementation(kyo_resumable_expression))) { 
         EHandler {
             module_resolver;
             effect_name;
@@ -255,6 +255,10 @@ kyo_handler:
         }
     }
 
+
+kyo_resumable_expression:
+    | located(kyo_expression) { KyoExpr $1 }
+    | RESUME located(kyo_expression) { KyoResumeExpr $2 }
 
 kyo_expression:
     | kyo_pathed_expression { $1 }
@@ -301,10 +305,14 @@ kyo_expression:
     | p=located(kyo_pattern) ot=option(preceded(COLON, located(kyo_type))) {
         p, ot
     }
+kyo_global_decl(expr):
+    | LET gvariable_name=loc_var_identifier greturn_type=option(preceded(COLON, located(kyo_type))) EQUAL gbody=located(expr) { 
+        {gvariable_name; greturn_type; gbody}
+    }
 
-kyo_function_decl:
+kyo_function_decl(expr):
     | FUNCTION function_name=loc_var_identifier 
-        fparameters=parenthesis(separated_list(COMMA,kyo_function_param )) sig_r=signature_return EQUAL fbody=located(kyo_expression) 
+        fparameters=parenthesis(separated_list(COMMA,kyo_function_param )) sig_r=signature_return EQUAL fbody=located(expr) 
     { 
         let freturn_effect, freturn_type = sig_r in
         {function_name; fparameters; freturn_effect; freturn_type; fbody}
@@ -314,11 +322,6 @@ kyo_external_decl:
     | EXTERNAL sig_name=loc_var_identifier sig_function=signature EQUAL sig_external_name=located(String_lit) { 
         let open KnodeExternal in
         {sig_name; sig_function; sig_external_name}
-    }
-
-kyo_global_decl:
-    | LET gvariable_name=loc_var_identifier greturn_type=option(preceded(COLON, located(kyo_type))) EQUAL gbody=located(kyo_expression) { 
-        {gvariable_name; greturn_type; gbody}
     }
 
 kyo_type_decl:
