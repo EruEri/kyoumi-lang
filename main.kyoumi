@@ -1,103 +1,24 @@
-// effect ask('a) {
-//     val default : int
-//     fn ask(int, int) : 'a
-// }
-
-// type option('a) = 
-//     | none
-//     | some('a)
-
-// type struct('a) = {
-//     x: 'a,
-//     s: string
-// }
-
-// external print(int, string) : _ bool = ""
-
-// fun (10 | _) -> 10
-
-// let x = fun () -> 10 in
-// x()
-// let m = map(x) fun n -> n + 1;
-// match t {
-//     .some(_)
-//     _
-//     ask { }
-//     x
-// }
-
-// effect dummy {
-//     fn d() : (Effect.ask(int)) int
-
-
-//     fn h() : (exn & `a) int
-// }
-
-
-// let x =
-//     let y = 10 ; y.x.x
-
-// external `+`(int, int) : total int = "kyoumi_int_add"
-// external `-`(int, int) : int = "kyoumi_int_minus"
-// external ! ()
-
-
-// fn ask(x: int, x: 'a) : (ask<'a>) option<'a> =
-//     let x = perform() in
-
-// let x = @array(1, 2, 4, 8)
-// ley y = 1::2::[]
-    
-// fn map(l: list<'a>, mapper: fn('a) -> `a 'b ) : `b list('b) = 
-//     match l {
-//         | [] -> []
-//         | t::q -> {}
-//     }
-
-
-type coordinate = {
-    x: int,
-    y: int
+effect ask('a) {
+    fn ask() : `a 'a
 }
 
-type 
-
-type effect_result('a) =
-    | Return('a)
-    | Continue('a)
-
-fn `|>`(x: 'a, f: fn('a): `a 'b) : `a 'b = 
-    f(x)
-
-fn main() : (io & exn & out_mem) int = 
-    // let i = fun(x) -> x end in
-    let h = handler ask.{
-        let default = 10
-        fn ask(x: int, y : int) : `a int = let x = 10 in x
-    } in
-    let p = coordinate.{ x = 10, y = 30 } in
-    let o = .some(30) in
-    let x = p->x
-    // let i = while 10 { 10 } in
+type list('a) = 
+    | nil
+    | cons ('a, list('a))
     
-    // let open Fs::Open in
-    let open Operator in
+// fn map(list: a, mapper: b): `a list('a) = match list {
+//     .nil -> .ni
+// }
+
+external `+`(int, int): ` b int = "kyoumi_int_add"
+
+fn main(): `a int = 
     let open Effect in
-    let shift = coordinate{x = 10} in
-    let reduce = coordinate.{x = 10}.x.y /* */
-    let x = 
-        x 
-        |> List.map() fun(x) -> x(1) end with h
-        |> List.fold_left(0) `+` in
-    let f = perform ask.default in
-    let not = !(true) in
-
-    let x = &. ask.default() in
-    
-
-    // let y = Operator.`+`(10, 20) in
-
-    // let x = ask() with handler in
-
-    // let x = fun x y -> x + y in  
-    resume(10)
+    let open Operator in
+    let ask = handler ask {
+        fn ask() : `a 'a = 
+            resume 10
+    } in
+    let asked = &.ask() in
+    // let x = `+`(10, 20) in
+    10

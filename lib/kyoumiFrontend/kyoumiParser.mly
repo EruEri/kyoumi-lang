@@ -26,7 +26,7 @@
 
 %token <string> IDENT
 %token <string> PolymorphicVar
-%token <string> PolymorphicEff
+// %token <string> PolymorphicEff
 %token <string> Module_IDENT
 %token <string> String_lit
 %token <float> Float_lit
@@ -58,7 +58,8 @@
 %token WILDCARD
 %token WHILE MATCH VAL WITH END IN OPEN
 %token REF
-%token COLON SEMICOLON DOUBLECOLON EQUAL
+%token COLON DOUBLECOLON EQUAL
+// %token SEMICOLON
 %token PIPE DOT AMPERSAND
 %token COMMA
 %token EOF
@@ -72,7 +73,7 @@
 %left INFIX_CARET INFIX_TILDE
 %left INFIX_PLUS INFIX_MINUS 
 %left INFIX_MULT INFIX_DIV INFIX_PERCENT
-%nonassoc PREFIX_EXCLA PREFIX_QUESTIONMARK
+// %nonassoc PREFIX_EXCLA PREFIX_QUESTIONMARK
 
 %left MINUS_SUP
 
@@ -405,7 +406,7 @@ kyo_effect_sig:
     }
 
 kyo_effect:
-    | located(PolymorphicEff) {
+    | located(preceded(BACKTICK, IDENT)) {
         EffLocPolymorphic $1
     }
     | module_resolver=module_resolver effect_name=located(IDENT) {

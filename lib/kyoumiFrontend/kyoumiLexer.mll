@@ -64,7 +64,7 @@ rule token = parse
 | ")" { RPARENT }
 | "{" { LBRACE }
 | "}" { RBRACE }
-| ";" { SEMICOLON }
+(* | ";" { SEMICOLON } *)
 | ":" { COLON }
 | "::" { DOUBLECOLON }
 | "," { COMMA }
@@ -72,14 +72,19 @@ rule token = parse
 | "_" { WILDCARD }
 (* | "[" { LSQBRACE }
 | "]" { RSQBRACE } *)
-| "`"  not_identifier {
+(* | '`' (lower_identifier as s) {
+      PolymorphicEff s
+} *)
+| '`' {
     BACKTICK
 }
-| "`" {
-    polymorphic_eff lexbuf
- }
-| "'" { 
-    polymorphic_var lexbuf
+
+| '\'' (lower_identifier as s) { 
+    PolymorphicVar s
+}
+| '"' {
+    let buffer = Buffer.create 17 in
+    read_string buffer lexbuf
 }
 | "@" { built_in_function lexbuf }
 | (infix_symbol as i) (operator_symbol* as os) as all {
@@ -130,14 +135,6 @@ rule token = parse
     Integer_lit (int_of_string n)
 }
 | eof { EOF }
-and polymorphic_var = parse
-| lower_identifier as s {
-    PolymorphicVar s
-}
-and polymorphic_eff = parse
-| lower_identifier as s {
-    PolymorphicEff s
-}
 and read_string buffer = parse
 | '"' { String_lit (Buffer.contents buffer) }
 | (hexa_char as s) {
