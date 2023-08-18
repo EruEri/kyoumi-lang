@@ -180,7 +180,7 @@ kyo_pattern:
         | p::[] -> p.value
         | list -> PTuple list
     }
-    | DOT located(IDENT) loption(delimited(LPARENT, separated_nonempty_list(COMMA, located(kyo_pattern)) ,RPARENT))  {
+    | DOT located(IDENT) loption(parenthesis(separated_nonempty_list(COMMA, located(kyo_pattern))))  {
         PCase {
             variant = $2;
             assoc_patterns = $3

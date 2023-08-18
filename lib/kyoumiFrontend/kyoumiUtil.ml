@@ -100,6 +100,18 @@ module Module = struct
       let name = Util.Convertion.filename_of_module modules in
       if name = filename then Some kyo_module else None
     )
+
+
+  
+
+  (** 
+    [calling_graph kyo_program] builds a graph where where each node is and a [kyo_node] and
+    and each each edge an function call
+
+    It uses to detemine which function are mutualy recursive
+  *)
+  let calling_graph _kyo_program = 
+    failwith ""
 end
 
 module Pattern = struct

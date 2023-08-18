@@ -17,3 +17,4 @@
 
 module Position = Position
 module Convertion = Convertion
+module Graph = Graph

@@ -21,9 +21,16 @@ let rec kyo_program ~acc = function
   let (let*) = Result.bind in
   let* kyo_module = In_channel.with_open_bin kyofile (fun ic ->
     let lexbuf = Lexing.from_channel ic in
-    KyoumiParserToken.parse lexbuf (KyoumiParser.Incremental.kyo_module lexbuf.lex_curr_p)
+    KyoumiParserToken.parse lexbuf @@ KyoumiParser.Incremental.kyo_module lexbuf.lex_curr_p
   ) in
   kyo_program ~acc:(KyoumiAst.{filename = kyofile; kyo_module}::acc) q
 
 let kyo_program = kyo_program ~acc:[]
   
+let rec map_ok f = function 
+  | [] -> Result.ok []
+  | t::q -> 
+    let (let*) = Result.bind in
+    let* res = f t in
+    let* list = map_ok f q in
+    Result.ok @@ res::list 

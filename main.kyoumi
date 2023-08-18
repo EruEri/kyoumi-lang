@@ -6,9 +6,14 @@ type list('a) =
     | nil
     | cons ('a, list('a))
     
-// fn map(list: a, mapper: b): `a list('a) = match list {
-//     .nil -> .ni
-// }
+fn `|>`(x, f): `b 'a = 
+    f(x)
+
+fn map(list, mapper): `a list('a) = match list {
+    | .nil -> .nil
+    | .cons(x, xs) ->
+        .cons(mapper(x), map(xs, mapper) )
+}
 
 external `+`(int, int): ` b int = "kyoumi_int_add"
 
@@ -17,8 +22,12 @@ fn main(): `a int =
     let open Operator in
     let ask = handler ask {
         fn ask() : `a 'a = 
-            resume 10
+        resume
+            let x = 10 in  10
     } in
     let asked = &.ask() in
-    // let x = `+`(10, 20) in
+    // let y = match x {
+    //     .nil 
+    // } in
+    let x = `+`(10, 20) in
     10
