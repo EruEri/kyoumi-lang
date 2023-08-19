@@ -69,6 +69,12 @@
    %{targets}
    (run menhir --compile-errors %{deps}))))
 
-(library
+
+(library 
  (name kyoumiFrontend)
- (libraries util menhirLib))
+ (libraries util menhirLib
+ (select kyoumiCallingGraph.ml from 
+  (domainslib -> kyoumiCallingGraph.Multicore.ml)
+  (-> kyoumiCallingGraph.Fallback.ml)
+  )
+ ))
