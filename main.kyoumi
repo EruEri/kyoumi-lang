@@ -18,7 +18,7 @@ end
 external `+`(int, int): ` b int = "kyoumi_int_add"
 
 
-let main = 
+let main : $(`a & `b) int = 
     let open Effect in
     let open Operator in
     let x = `+`(10, 20) in

@@ -22,7 +22,6 @@ module KyoType = struct
   | KyTyPolymorphic of string
   type kyo_type_function = 
     {
-      effects: kyo_effect;
       parameters: kyo_type list;
       return_type: kyo_type
     }
@@ -35,6 +34,10 @@ module KyoType = struct
     | TyIdentifier of {
       module_resolver: string list;
       name: string
+    }
+    | TyEffectedType of {
+      kyo_effect: kyo_effect;
+      kyo_type: kyo_type
     }
     | TyHandler of kyo_effect
     | TyPolymorphic of kyo_type_polymorphic
@@ -87,7 +90,6 @@ module KyoLocType = struct
     | KyLocTyPolymorphic of string location
   type kyoloc_type_function = 
     {
-      effects: kyoloc_effect location;
       parameters: kyoloc_type location list;
       return_type: kyoloc_type location
     }
@@ -100,6 +102,10 @@ module KyoLocType = struct
     | TyLocIdentifier of {
       module_resolver: string location list;
       name: string location
+    }
+    | TyLocEffectedType of {
+      kyo_effect: kyoloc_effect location;
+      kyo_type: kyoloc_type location
     }
     | TyLocHandler of kyoloc_effect location
     | TyLocPolymorphic of kyoloc_type_polymorphic

@@ -92,6 +92,7 @@ rule token = parse
     | '|' when os = String.empty -> PIPE
     | '&' when os = String.empty -> AMPERSAND
     | '=' when os = String.empty -> EQUAL
+    | '$' when os = String.empty -> DOLLAR
     (* | '=' when all = "=>" -> EQUAL_SUP *)
     | '-' when all = "->" -> MINUS_SUP
     | '/' when all = "//" -> single_line_comment lexbuf

@@ -58,7 +58,7 @@
 %token WILDCARD
 %token WHILE MATCH VAL WITH END IN OPEN
 %token REF
-%token COLON DOUBLECOLON EQUAL
+%token COLON DOUBLECOLON EQUAL DOLLAR
 // %token SEMICOLON
 %token PIPE DOT AMPERSAND
 %token COMMA
@@ -111,13 +111,9 @@
 %inline backticked(X):
     | delimited(BACKTICK, X, BACKTICK) { $1 }
 
-%inline signature_return:
-    | COLON effects=located(kyo_effect) return_type=located(kyo_type) {effects, return_type}
-
 %inline signature:
-    | parameters=delimited(LPARENT, separated_list(COMMA, located(kyo_type)), RPARENT) sig_r=signature_return {
-        let effects, return_type = sig_r in
-        {parameters; return_type; effects}
+    | parameters=delimited(LPARENT, separated_list(COMMA, located(kyo_type)), RPARENT) COLON return_type=located(kyo_type) {
+        {parameters; return_type}
     }
     
 
@@ -152,7 +148,6 @@ kyo_node:
     | kyo_effect_decl { KNEffect $1 }
     | kyo_type_decl { $1 }
     | kyo_external_decl { KNExternal $1 }
-    // | kyo_function_decl(kyo_expression) { KNFunction $1 }
     | kyo_global_decl(kyo_expression) { KNDeclaration $1 }
 
 kyo_pattern:
@@ -326,20 +321,8 @@ kyo_expression:
 kyo_global_decl(expr):
     | LET gvariable_name=loc_var_identifier greturn_type=option(preceded(COLON, located(kyo_type))) EQUAL gbody=located(expr) { 
         {gvariable_name; greturn_type; gbody}
-    }
-    
-// %inline kyo_function_param:
-//     | p=located(kyo_pattern) ot=option(preceded(COLON, located(kyo_type))) {
-//         p, ot
-//     }
+    } 
 
-// kyo_function_decl(expr):
-//     | FUNCTION function_name=loc_var_identifier 
-//         fparameters=parenthesis(separated_list(COMMA,kyo_function_param )) sig_r=signature_return EQUAL fbody=located(expr) 
-//     { 
-//         let freturn_effect, freturn_type = sig_r in
-//         {function_name; fparameters; freturn_effect; freturn_type; fbody}
-//     }
 
 kyo_external_decl:
     | EXTERNAL sig_name=loc_var_identifier sig_function=signature EQUAL sig_external_name=located(String_lit) { 
@@ -391,12 +374,6 @@ kyo_effect_sig:
             effect_type 
         } 
     }
-    // | FUNCTION name=located(IDENT) effect_sig=signature {
-    //     KEffSig {
-    //         name;
-    //         effect_sig;
-    //     }
-    // }
 
 %inline kyo_ky_polymorphic:
     | located(PolymorphicVar) { 
@@ -421,9 +398,11 @@ kyo_effect:
             eff_parametric_type;
         }
     }
-    | parenthesis(separated_nonempty_list(AMPERSAND, located(kyo_effect))) {
-        EffLocList $1
+    | effects=parenthesis(separated_nonempty_list(AMPERSAND, located(kyo_effect))) {
+        (* let effects = flatten_kyo_effect effects in *)
+        EffLocList effects
     }
+
 
 kyo_type:
     | kyo_ky_polymorphic {
@@ -434,6 +413,12 @@ kyo_type:
     }
     | HANDLER parenthesis(located(kyo_effect)) {
         TyLocHandler $2
+    }
+    | DOLLAR kyo_effect=located(kyo_effect) kyo_type=located(kyo_type) {
+        TyLocEffectedType {
+            kyo_effect;
+            kyo_type;
+        }
     }
     | FUNCTION signature {
         TyLocFunction $2

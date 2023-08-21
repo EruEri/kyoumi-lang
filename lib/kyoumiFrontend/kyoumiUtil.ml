@@ -30,6 +30,11 @@ module KyoGraph = Util.Graph.Make(KyoNode)
 
 module KyTypeEffect = struct
 
+  let rec flatten_kyo_effect effect = match effect.value with
+  | (KyoumiAst.KyoLocType.EffLocPolymorphic _ | EffLocType _) -> effect::[]
+  | EffLocList effects ->
+    effects |> List.map flatten_kyo_effect |> List.flatten
+
   let rec of_kyoloc_type = function
   | KyoLocType.TyLocParametricIdentifier {
     module_resolver;
@@ -47,6 +52,11 @@ module KyTypeEffect = struct
     let module_resolver = values module_resolver in
     let name = value name in 
     TyIdentifier {module_resolver; name}
+  | TyLocEffectedType {kyo_effect; kyo_type} ->
+    TyEffectedType {
+      kyo_effect = of_kyoloc_effect' kyo_effect;
+      kyo_type = of_kyoloc_type' kyo_type
+    }
   | TyLocHandler effects ->
     let effects = of_kyoloc_effect' effects in
     TyHandler effects
@@ -85,9 +95,8 @@ module KyTypeEffect = struct
   and of_kyoloc_type_polymorphic = function
   | KyLocTyPolymorphic s -> KyoType.KyTyPolymorphic s.value
   and of_kyoloc_type_function : KyoLocType.kyoloc_type_function -> KyoType.kyo_type_function = function
-  | {effects; parameters; return_type} -> 
+  | {parameters; return_type} -> 
     {
-      effects = of_kyoloc_effect' effects;
       parameters = List.map of_kyoloc_type' parameters;
       return_type = of_kyoloc_type' return_type
     }
