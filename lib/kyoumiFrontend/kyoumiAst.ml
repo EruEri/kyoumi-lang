@@ -177,14 +177,13 @@ module KNodeEffect = struct
     effect_type: KyoLocType.kyoloc_type location
   }
 
-  type effect_function = {
+  (* type effect_function = {
     name: string location;
     effect_sig: KyoLocType.kyoloc_type_function;
-  }
+  } *)
 
   type effect_signature = 
   | KEffVal of effect_value
-  | KEffSig of effect_function
 
   type effect_declaration = {
     name: string location;
@@ -194,21 +193,20 @@ module KNodeEffect = struct
 end
 
 module KExpresssion = struct
-  type 'a function_declaration = {
+  (* type 'a function_declaration = {
     function_name: string location;
     fparameters: (kyoloc_pattern location * (KyoLocType.kyoloc_type location option)) list;
     freturn_effect: KyoLocType.kyoloc_effect location;
     freturn_type: KyoLocType.kyoloc_type location; 
     fbody: 'a location;
-  }
-  and 'a global_declaration = {
+  } *)
+  type 'a global_declaration = {
     gvariable_name: string location;
     greturn_type: KyoLocType.kyoloc_type location option;
     gbody: 'a location;
   }
   and kyo_eff_value_decl = 
     | KyEffValGlobal of kyo_resumable_expression global_declaration
-    | KyEffValFunction of kyo_resumable_expression function_declaration
   and kyo_eff_handler = 
     (* identifier name *)
     | KyEffHandler of string location
@@ -321,7 +319,6 @@ module KExpresssion = struct
   | ETuple of kyo_expression location list
   and kyo_effect_implementation = 
   | KyEffImplLet of kyo_resumable_expression global_declaration
-  | KyEffImplFn of kyo_resumable_expression function_declaration 
 end
 
 type kyo_node = 
@@ -329,8 +326,7 @@ type kyo_node =
 | KNEnum of KNodeEnum.enum_declaration
 | KNRecord of KNodeRecord.record_declaration
 | KNExternal of KnodeExternal.external_declaration
-| KNFunction of KExpresssion.kyo_expression KExpresssion.function_declaration
-| KNGlobal of KExpresssion.kyo_expression KExpresssion.global_declaration
+| KNDeclaration of KExpresssion.kyo_expression KExpresssion.global_declaration
 
 type kyo_module = kyo_node list
 

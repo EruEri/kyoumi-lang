@@ -18,6 +18,14 @@
 open Util.Position
 open KyoumiAst
 
+module KyoNode = struct
+  type t = kyo_node
+
+  let compare = Stdlib.compare
+end
+
+module KyoGraph = Util.Graph.Make(KyoNode)
+
 
 
 module KyTypeEffect = struct
@@ -100,9 +108,15 @@ module Module = struct
       let name = Util.Convertion.filename_of_module modules in
       if name = filename then Some kyo_module else None
     )
-
-
-  
+    
+    let rec calling_graph_expr' kyo_env graph expr = calling_graph_expr kyo_env graph @@ Util.Position.value expr
+    and calling_graph_expr _kyo_env graph = 
+    let open KyoumiAst.KExpresssion in
+    function
+    | EUnit | ECmpLess | ECmpEqual | ECmpGreater | EInteger _ | EFloat _ -> 
+      graph
+    | EIdentifier {module_resolver = _; name = _}  -> failwith ""
+    | _ -> failwith ""
 
   (** 
     [calling_graph kyo_program] builds a graph where where each node is and a [kyo_node] and

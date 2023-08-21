@@ -14,16 +14,28 @@
 (* If not, see <http://www.gnu.org/licenses/>.                                                *)
 (*                                                                                            *)
 (**********************************************************************************************)
+ 
+module T = Domainslib.Task
+module KyoGraph = KyoumiUtil.KyoGraph
+open KyoumiAst
 
-(* module T = Domainslib.Task
-
-let calling_graph kyo_program kyo_module = failwith ""
+let calling_graph _kyo_program kyo_module = 
+  kyo_module
+  |> List.fold_left (fun graph -> function
+  | KNDeclaration _ -> failwith ""
+  | KNEffect _|KNEnum _|KNRecord _|KNExternal _ ->
+    graph
+  ) KyoGraph.empty
 
 let calling_graph kyo_program = 
   let open KyoumiAst in
   let nb_core = Domain.recommended_domain_count () in
   let pool = T.setup_pool ~num_domains:nb_core () in
-  let _ = 
-    kyo_program |> List.map (fun {filename; kyo_module} -> 
-      T.parallel_scan
-    ) *)
+  kyo_program 
+    |> List.map (fun {filename = _; kyo_module} -> 
+      T.async pool (fun _ -> calling_graph kyo_program kyo_module)
+    )
+    |> List.fold_left (fun graph promise ->
+      let await = T.await pool promise in
+      KyoGraph.merge graph await
+    ) KyoGraph.empty

@@ -1,33 +1,26 @@
-effect ask('a) {
-    fn ask() : `a 'a
-}
+// effect ask('a) {
+//     val ask : fn() `a 'a
+// }
 
 type list('a) = 
     | nil
     | cons ('a, list('a))
     
-fn `|>`(x, f): `b 'a = 
-    f(x)
+let `|>` = fun(x, f) -> f(x) end
 
-fn map(list, mapper): `a list('a) = match list {
+let map = fun(list, mapper) -> match list {
     | .nil -> .nil
     | .cons(x, xs) ->
         .cons(mapper(x), map(xs, mapper) )
-}
+} 
+end
 
 external `+`(int, int): ` b int = "kyoumi_int_add"
 
-fn main(): `a int = 
+
+let main = 
     let open Effect in
     let open Operator in
-    let ask = handler ask {
-        fn ask() : `a 'a = 
-        resume
-            let x = 10 in  10
-    } in
-    let asked = &.ask() in
-    // let y = match x {
-    //     .nil 
-    // } in
     let x = `+`(10, 20) in
+    let asked = &.ask() in
     10

@@ -31,7 +31,7 @@
 %token <string> String_lit
 %token <float> Float_lit
 %token <int> Integer_lit
-%token <string> BUILTIN
+// %token <string> BUILTIN
 %token <string> INFIX_PIPE
 %token <string> INFIX_AMPERSAND
 %token <string> INFIX_EQUAL
@@ -152,8 +152,8 @@ kyo_node:
     | kyo_effect_decl { KNEffect $1 }
     | kyo_type_decl { $1 }
     | kyo_external_decl { KNExternal $1 }
-    | kyo_function_decl(kyo_expression) { KNFunction $1 }
-    | kyo_global_decl(kyo_expression) { KNGlobal $1 }
+    // | kyo_function_decl(kyo_expression) { KNFunction $1 }
+    | kyo_global_decl(kyo_expression) { KNDeclaration $1 }
 
 kyo_pattern:
     | TRUE { PTrue }
@@ -229,12 +229,8 @@ kyo_pattern_branch:
         parameters, handlers
     }
 
-%inline either_COLON_EQUAL:
-    | COLON { () }
-    | EQUAL { () }
-
 %inline kyo_expr_record_line:
-    | located(IDENT) option(preceded(either_COLON_EQUAL, located(kyo_expression))) {
+    | located(IDENT) option(preceded(EQUAL, located(kyo_expression))) {
         let none = $1 |> Position.map @@ fun _ -> EIdentifier {module_resolver = []; name = $1} in
         let rhs = Option.fold ~none ~some:(Fun.id) $2 in
         $1, rhs
@@ -258,7 +254,7 @@ kyo_pathed_expression:
 
 %inline kyo_handler_implementation(expr):
     | kyo_global_decl(expr) { KyEffImplLet $1 }
-    | kyo_function_decl(expr) { KyEffImplFn $1 }
+    // | kyo_function_decl(expr) { KyEffImplFn $1 }
 
 %inline kyo_effect_perform_pefix:
     | AMPERSAND DOT
@@ -326,22 +322,24 @@ kyo_expression:
         EMatch (e, ps)
     }
 
-%inline kyo_function_param:
-    | p=located(kyo_pattern) ot=option(preceded(COLON, located(kyo_type))) {
-        p, ot
-    }
+
 kyo_global_decl(expr):
     | LET gvariable_name=loc_var_identifier greturn_type=option(preceded(COLON, located(kyo_type))) EQUAL gbody=located(expr) { 
         {gvariable_name; greturn_type; gbody}
     }
+    
+// %inline kyo_function_param:
+//     | p=located(kyo_pattern) ot=option(preceded(COLON, located(kyo_type))) {
+//         p, ot
+//     }
 
-kyo_function_decl(expr):
-    | FUNCTION function_name=loc_var_identifier 
-        fparameters=parenthesis(separated_list(COMMA,kyo_function_param )) sig_r=signature_return EQUAL fbody=located(expr) 
-    { 
-        let freturn_effect, freturn_type = sig_r in
-        {function_name; fparameters; freturn_effect; freturn_type; fbody}
-    }
+// kyo_function_decl(expr):
+//     | FUNCTION function_name=loc_var_identifier 
+//         fparameters=parenthesis(separated_list(COMMA,kyo_function_param )) sig_r=signature_return EQUAL fbody=located(expr) 
+//     { 
+//         let freturn_effect, freturn_type = sig_r in
+//         {function_name; fparameters; freturn_effect; freturn_type; fbody}
+//     }
 
 kyo_external_decl:
     | EXTERNAL sig_name=loc_var_identifier sig_function=signature EQUAL sig_external_name=located(String_lit) { 
@@ -393,12 +391,12 @@ kyo_effect_sig:
             effect_type 
         } 
     }
-    | FUNCTION name=located(IDENT) effect_sig=signature {
-        KEffSig {
-            name;
-            effect_sig;
-        }
-    }
+    // | FUNCTION name=located(IDENT) effect_sig=signature {
+    //     KEffSig {
+    //         name;
+    //         effect_sig;
+    //     }
+    // }
 
 %inline kyo_ky_polymorphic:
     | located(PolymorphicVar) { 

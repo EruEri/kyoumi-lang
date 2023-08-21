@@ -86,7 +86,7 @@ rule token = parse
     let buffer = Buffer.create 17 in
     read_string buffer lexbuf
 }
-| "@" { built_in_function lexbuf }
+(* | "@" { built_in_function lexbuf } *)
 | (infix_symbol as i) (operator_symbol* as os) as all {
     match i with
     | '|' when os = String.empty -> PIPE
@@ -184,7 +184,7 @@ and multiple_line_comment = parse
 | eof {
     raise @@ raw_lexer_error @@ Unclosed_comment (current_position lexbuf)
 }
-and built_in_function = parse
+(* and built_in_function = parse
 | identifiant as s {
     match Hashtbl.find_opt keywords s with
     | None -> BUILTIN s
@@ -193,4 +193,4 @@ and built_in_function = parse
 | _ as lit {
      (Invalid_litteral_for_build_in_function ( current_position lexbuf ,lit)  |> raw_lexer_error |> raise )
 }
-| eof {  Not_finished_built_in_function (current_position lexbuf)  |> raw_lexer_error |> raise }
+| eof {  Not_finished_built_in_function (current_position lexbuf)  |> raw_lexer_error |> raise } *)
