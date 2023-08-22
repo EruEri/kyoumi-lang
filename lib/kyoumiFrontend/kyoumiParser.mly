@@ -147,8 +147,7 @@ kyo_module:
 kyo_node:
     | kyo_effect_decl { KNEffect $1 }
     | kyo_type_decl { KNType $1 }
-    | kyo_external_decl { KNExternal $1 }
-    | kyo_global_decl(kyo_expression) { KNDeclaration $1 }
+    | kyo_function_decl { KNFunction $1 }
 
 kyo_pattern:
     | TRUE { PTrue }
@@ -321,14 +320,8 @@ kyo_expression:
 kyo_global_decl(expr):
     | LET gvariable_name=loc_var_identifier greturn_type=option(preceded(COLON, located(kyo_type))) EQUAL gbody=located(expr) { 
         {gvariable_name; greturn_type; gbody}
-    } 
-
-
-kyo_external_decl:
-    | EXTERNAL sig_name=loc_var_identifier sig_function=signature EQUAL sig_external_name=located(String_lit) { 
-        let open KnodeExternal in
-        {sig_name; sig_function; sig_external_name}
     }
+
 
 kyo_type_decl:
     | TYPE record_name=located(IDENT) polymorp_vars=generics(kyo_ky_polymorphic) EQUAL fields=kyo_record_decl {
@@ -337,6 +330,15 @@ kyo_type_decl:
     }
     | TYPE enum_name=located(IDENT) polymorp_vars=generics(kyo_ky_polymorphic) EQUAL cases=kyo_enum_decl {
         KyoTyEnumDecl { enum_name; polymorp_vars; cases }
+    }
+
+kyo_function_decl:
+    | EXTERNAL sig_name=loc_var_identifier sig_function=signature EQUAL sig_external_name=located(String_lit) { 
+        let open KnodeExternal in
+        KyoFnExternal {sig_name; sig_function; sig_external_name}
+    }
+    | decl=kyo_global_decl(kyo_expression) {
+        KyoFnDeclaration decl
     }
 
 kyo_enum_decl:

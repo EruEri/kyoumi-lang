@@ -15,7 +15,11 @@
 (*                                                                                            *)
 (**********************************************************************************************)
 
-module Position = Position
-module Convertion = Convertion
-module Graph = Graph
-module Ulist = Ulist
+
+let rec map_ok f = function 
+  | [] -> Result.ok []
+  | t::q -> 
+    let (let*) = Result.bind in
+    let* res = f t in
+    let* list = map_ok f q in
+    Result.ok @@ res::list 

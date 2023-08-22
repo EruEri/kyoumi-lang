@@ -16,20 +16,20 @@
 (**********************************************************************************************)
  
 module T = Domainslib.Task
-module KyoGraph = KyoumiUtil.KyoGraph
+module KyoFunctionGraph = KyoumiUtil.KyoFunctionGraph
 open KyoumiAst
 
 let calling_graph _kyo_program kyo_module = 
   kyo_module
   |> List.fold_left (fun graph -> function
-  | KNDeclaration _ -> failwith ""
-  | KNEffect _| KNType _|KNExternal _ ->
+  | KNFunction _declaration -> failwith ""
+  | KNEffect _| KNType _ ->
     graph
-  ) KyoGraph.empty
+  ) KyoFunctionGraph.empty
 
 let calling_graph kyo_program = 
   let open KyoumiAst in
-  let nb_core = Domain.recommended_domain_count () in
+  let nb_core = Domain.recommended_domain_count () - 1 in
   let pool = T.setup_pool ~num_domains:nb_core () in
   kyo_program 
     |> List.map (fun {filename = _; kyo_module} -> 
@@ -37,5 +37,5 @@ let calling_graph kyo_program =
     )
     |> List.fold_left (fun graph promise ->
       let await = T.await pool promise in
-      KyoGraph.merge graph await
-    ) KyoGraph.empty
+      KyoFunctionGraph.merge graph await
+    ) KyoFunctionGraph.empty

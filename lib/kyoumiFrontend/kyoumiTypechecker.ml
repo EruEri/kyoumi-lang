@@ -17,66 +17,14 @@
 
 open Util.Position
 open KyoumiAst.KExpresssion
+open KyoumiUtil
 open KyoumiError
+module KyoEnv = KyoumiUtil.KyoEnv
 
-module KyoNodeConstraintHashedType : Hashtbl.HashedType = struct
-  type t = KyoumiAst.kyo_node
-
-  (* We can use the physic equality since a node is unique and not recreated *)
-  let equal = ( == )
-
-  let hash : 'a . 'a -> int = Hashtbl.hash
-end
-
-module KyoNodeConstraintHash = Hashtbl.Make(KyoNodeConstraintHashedType)
-(* 
-let kyo_node_constraint = KyoNodeConstraintHash.create 21 *)
-
-module KyoTypeConstraintSet = KyoumiUtil.KyoTypeConstraintSet
-
-type kyo_tying_env = (string * KyoumiAst.KyoType.kyo_type) list
-type kyo_tying_constraints = KyoumiUtil.KyoTypeConstraintSet.t
-
-type kyo_env = {
-  program: KyoumiAst.kyo_program;
-  opened_module: KyoumiAst.kyo_module list;
-  variable_env: kyo_tying_env;
-  kyo_tying_constraints: kyo_tying_constraints;
-}
-
-let merge_constraints base rhs = 
-  {
-    base with kyo_tying_constraints = KyoTypeConstraintSet.union base.kyo_tying_constraints rhs.kyo_tying_constraints
-  }
-let fresh_variable reset =
-  let counter = ref 0 in
-  fun () -> 
-    let () = match reset with
-      | false -> ()
-      | true -> counter := 0 
-    in
-    let n = !counter in
-    let () = incr counter in
-    Printf.sprintf "'t%u" n
-
-let fresh_variable_type ?(reset = false) () = 
-  KyoumiAst.KyoType.TyPolymorphic(KyTyPolymorphic (fresh_variable reset ()))
-
-let add_constraint ~lhs ~rhs env =
-  let constrai = KyoumiAst.KyoType.{cstr_lhs = lhs; cstr_rhs = rhs} in
-  { env with kyo_tying_constraints = KyoumiUtil.KyoTypeConstraintSet.add constrai env.kyo_tying_constraints}
-
-let add_module kyo_module kyo_env =
-  { kyo_env with opened_module = kyo_module::kyo_env.opened_module }
-
-let add_variable variable kyo_type kyo_env = 
-  {
-    kyo_env with variable_env = (variable, kyo_type)::kyo_env.variable_env
-  }
-
+  
 let rec typeof_expr' kyo_env expr = typeof_expr kyo_env @@ value expr
 
-and typeof_expr kyo_env = 
+and typeof_expr (kyo_env : KyoEnv.kyo_env) = 
 let open KyoumiAst.KyoType in
 function
 | EUnit -> kyo_env, TyUnit
@@ -90,11 +38,11 @@ function
   kyo_env, TyString
 | EOpen {module_resolver; next} ->
   let kyo_module = 
-    match KyoumiUtil.Module.find_module module_resolver kyo_env.program with
+    match Module.find_module module_resolver kyo_env.program with
     | Some kyo_module -> kyo_module
     | None -> raise @@ unbound_module module_resolver
   in
-  let kyo_env = add_module kyo_module kyo_env in
+  let kyo_env = KyoEnv.add_module kyo_module kyo_env in
   let next_type = typeof_expr' kyo_env next in
   next_type
 | ETuple kyo_exprs ->
@@ -104,13 +52,13 @@ function
   kyo_extented_env, TyTuple (kyo_types)
 | EWhile {w_condition; w_body} ->
   let (env, c) = typeof_expr' kyo_env w_condition in
-  let kyo_env = merge_constraints kyo_env env in
+  let kyo_env = KyoEnv.merge_constraints kyo_env env in
   let (env, b) = typeof_expr' env w_body in
-  let kyo_env = merge_constraints kyo_env env in
+  let kyo_env = KyoEnv.merge_constraints kyo_env env in
   let kyo_env = 
     kyo_env
-    |> add_constraint ~lhs:c ~rhs:TyBool
-    |> add_constraint ~lhs:b ~rhs:TyUnit
+    |> KyoEnv.add_constraint ~lhs:c ~rhs:TyBool
+    |> KyoEnv.add_constraint ~lhs:b ~rhs:TyUnit
   in
   kyo_env, TyUnit
 | EFunctionCall {e_module_resolver; e_function_name; parameters; handlers} ->
@@ -122,27 +70,27 @@ and typeof_pattern scrutinee_type kyo_env =
 let open KyoumiAst.KyoType in
 function
 | PTrue | PFalse -> 
-  let kyo_env = add_constraint ~lhs:scrutinee_type ~rhs:KyoumiAst.KyoType.TyBool kyo_env in 
+  let kyo_env = KyoEnv.add_constraint ~lhs:scrutinee_type ~rhs:KyoumiAst.KyoType.TyBool kyo_env in 
   kyo_env, KyoumiAst.KyoType.TyBool
 | PEmpty -> 
   let ptype = TyUnit in
-  let kyo_env = add_constraint ~lhs:scrutinee_type ~rhs:ptype kyo_env in 
+  let kyo_env = KyoEnv.add_constraint ~lhs:scrutinee_type ~rhs:ptype kyo_env in 
   kyo_env, ptype
 | PCmpLess | PCmpEqual | PCmpGreater ->
   let ptype = TyOredered in
-  let kyo_env = add_constraint ~lhs:scrutinee_type ~rhs:ptype kyo_env in 
+  let kyo_env = KyoEnv.add_constraint ~lhs:scrutinee_type ~rhs:ptype kyo_env in 
   kyo_env, ptype
 | PWildcard ->
   kyo_env, scrutinee_type
 | PFloat _ ->
   let ptype = TyFloat in
-  let kyo_env = add_constraint ~lhs:scrutinee_type ~rhs:ptype kyo_env in 
+  let kyo_env = KyoEnv.add_constraint ~lhs:scrutinee_type ~rhs:ptype kyo_env in 
   kyo_env, ptype
 | PInteger _ ->
   let ptype = TyInteger in
-  let kyo_env = add_constraint ~lhs:scrutinee_type ~rhs:ptype kyo_env in 
+  let kyo_env = KyoEnv.add_constraint ~lhs:scrutinee_type ~rhs:ptype kyo_env in 
   kyo_env, ptype
 | PIdentifier id ->
-  let kyo_env = add_variable id.value scrutinee_type kyo_env in
+  let kyo_env = KyoEnv.add_variable id.value scrutinee_type kyo_env in
   kyo_env, scrutinee_type
 | _ -> failwith ""

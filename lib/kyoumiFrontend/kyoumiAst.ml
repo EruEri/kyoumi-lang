@@ -331,11 +331,14 @@ type kyo_type_declaration =
   | KyoTyEnumDecl of KNodeEnum.enum_declaration
   | KyoTyRecordDecl of KNodeRecord.record_declaration
 
+type kyo_function_declaration =
+  | KyoFnExternal of KnodeExternal.external_declaration
+  | KyoFnDeclaration of KExpresssion.kyo_expression KExpresssion.global_declaration
+
 type kyo_node = 
 | KNEffect of KNodeEffect.effect_declaration
 | KNType of kyo_type_declaration
-| KNExternal of KnodeExternal.external_declaration
-| KNDeclaration of KExpresssion.kyo_expression KExpresssion.global_declaration
+| KNFunction of kyo_function_declaration
 
 type kyo_module = kyo_node list
 

@@ -18,15 +18,105 @@
 open Util.Position
 open KyoumiAst
 
-module KyoNode = struct
-  type t = kyo_node
+module KyoFunctionNode = struct
+  type t = KExpresssion.kyo_expression KExpresssion.global_declaration
 
+  (* Can use KExpresssion.kyo_expression which contains located *)
   let compare = Stdlib.compare
 end
 
-module KyoGraph = Util.Graph.Make(KyoNode)
+module KyoFunctionGraph = Util.Graph.Make(KyoFunctionNode)
+
+module KyoTypeConstraintSet = Set.Make(struct
+  type t = KyoumiAst.KyoType.kyo_type_constraint
+
+  let compare = Stdlib.compare
+end)
+
+module KyoNodeConstraintHashedType : Hashtbl.HashedType = struct
+  type t = KyoumiAst.kyo_node
+
+  (* We can use the physic equality since a node is unique and not recreated *)
+  let equal = ( == )
+
+  let hash : 'a . 'a -> int = Hashtbl.hash
+end
+
+module KyoNodeConstraintHash = Hashtbl.Make(KyoNodeConstraintHashedType)
+(* 
+let kyo_node_constraint = KyoNodeConstraintHash.create 21 *)
+
+module KyoEnv = struct
+
+  type kyo_opened_module = {
+    current_module : KyoumiAst.kyo_module;
+    modules: KyoumiAst.kyo_module list
+  }
+  type kyo_tying_env = (string * KyoumiAst.KyoType.kyo_type) list
+  type kyo_tying_constraints = KyoTypeConstraintSet.t
+
+  type kyo_env = {
+    program: KyoumiAst.kyo_program;
+    opened_modules: kyo_opened_module;
+    variable_env: kyo_tying_env;
+    kyo_tying_constraints: kyo_tying_constraints;
+  }
+
+  let merge_constraints base rhs = 
+    {
+      base with kyo_tying_constraints = KyoTypeConstraintSet.union base.kyo_tying_constraints rhs.kyo_tying_constraints
+    }
+  let fresh_variable reset =
+    let counter = ref 0 in
+    fun () -> 
+      let () = match reset with
+        | false -> ()
+        | true -> counter := 0 
+      in
+      let n = !counter in
+      let () = incr counter in
+      Printf.sprintf "'t%u" n
+  
+  let fresh_variable_type ?(reset = false) () = 
+    KyoumiAst.KyoType.TyPolymorphic(KyTyPolymorphic (fresh_variable reset ()))
+  
+  let add_constraint ~lhs ~rhs env =
+    let constrai = KyoumiAst.KyoType.{cstr_lhs = lhs; cstr_rhs = rhs} in
+    { env with kyo_tying_constraints = KyoTypeConstraintSet.add constrai env.kyo_tying_constraints}
+  
 
 
+  (**
+    [add_module kyo_module kyo_env] adds the module [kyo_module] to the list of opened modules in [kyo_env]
+  *)
+  let add_module kyo_module kyo_env =
+    let opened_modules = kyo_env.opened_modules in
+    let opened_modules = {
+      opened_modules with modules = kyo_module::opened_modules.modules
+    } in
+    { kyo_env with opened_modules }
+  
+
+  (**
+    [add_variable variable kyo_type kyo_env] extends the variable environment [kyo_env] by the binding of [variable] with the type [kyo_type]
+  *)
+  let add_variable variable kyo_type kyo_env = 
+    {
+      kyo_env with variable_env = (variable, kyo_type)::kyo_env.variable_env
+    }
+
+  (** 
+    [assoc_type_opt name kyo_env] returns the type associated with the identifier [name] in the variable environment [kyo_env].
+    Returns [None] if [name] doesn't exist in [kyo_env]
+  *)
+  let assoc_type_opt name kyo_env =
+    List.assoc_opt name kyo_env.variable_env
+
+  (** [mem name kyo_env] checks if the identifier [name] exists in the variable environment [kyo_env]*)
+  let mem name kyo_env = 
+    Option.is_some @@ assoc_type_opt name kyo_env
+
+end
 
 module KyTypeEffect = struct
 
@@ -104,12 +194,6 @@ module KyTypeEffect = struct
   type kyo_type = KyoumiAst.KyoLocType.kyoloc_type 
 end
 
-module KyoTypeConstraintSet = Set.Make(struct
-  type t = KyoumiAst.KyoType.kyo_type_constraint
-
-  let compare = Stdlib.compare
-end)
-
 module Module = struct
   let find_module modules kyo_program = 
     kyo_program 
@@ -117,14 +201,50 @@ module Module = struct
       let name = Util.Convertion.filename_of_module modules in
       if name = filename then Some kyo_module else None
     )
+
+    let function_declarations kyo_module = 
+      kyo_module
+      |> List.filter_map @@ function
+        | KNFunction function_decl -> Some function_decl
+        | KNType _ | KNEffect _ -> None
+
+    let effect_declarations kyo_module = 
+      kyo_module
+      |>  List.filter_map @@ function
+      | KNType type_decl -> Some type_decl
+      | KNFunction _  | KNEffect _ -> None
     
-    let rec calling_graph_expr' kyo_env graph expr = calling_graph_expr kyo_env graph @@ Util.Position.value expr
-    and calling_graph_expr _kyo_env graph = 
+    let rec calling_graph_expr' current_declaration (kyo_env: KyoEnv.kyo_env) graph expr = calling_graph_expr current_declaration kyo_env graph @@ Util.Position.value expr
+    and calling_graph_expr current_declaration kyo_env graph = 
     let open KyoumiAst.KExpresssion in
     function
     | EUnit | ECmpLess | ECmpEqual | ECmpGreater | EInteger _ | EFloat _ -> 
       graph
-    | EIdentifier {module_resolver = _; name = _}  -> failwith ""
+    | EIdentifier {module_resolver = []; name}  -> 
+      let graph = match KyoEnv.mem name.value kyo_env with
+        | true -> graph 
+        | false -> 
+          let graph = 
+            match function_declarations kyo_env.opened_modules.current_module with
+            | [] -> raise @@ KyoumiError.undefined_identifier name
+            | t::[] -> begin match t with
+              | KyoFnExternal _ -> graph
+              | KyoFnDeclaration declaration -> 
+                let graph = KyoFunctionGraph.add_node declaration graph in
+                let graph = KyoFunctionGraph.link current_declaration ~along:declaration graph in
+                graph
+            end
+            | list -> raise @@ KyoumiError.multiple_function_defintions list
+          in
+         graph
+        in
+      graph
+    | EIdentifier {module_resolver = _::_ as module_resolver; name = _} -> 
+      let _kyo_module = match find_module module_resolver kyo_env.program with 
+        | Some m -> m
+        | None -> raise @@ KyoumiError.unbound_module module_resolver
+      in
+      failwith ""
     | _ -> failwith ""
 
   (** 

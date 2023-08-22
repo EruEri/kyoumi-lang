@@ -44,6 +44,8 @@ type kyo_error =
 | LexerError of lexer_error
 | UnsuppotedFile of string
 | UnboundModule of string location list
+| UndefinedIdentifier of string location
+| MultipleFunctionDefinitions of KyoumiAst.kyo_function_declaration list
 
 exception KyoError of kyo_error
 
@@ -51,6 +53,11 @@ let kyo_error e = KyoError e
 
 let unbound_module e = kyo_error @@ UnboundModule e
 let unsupported_file e = kyo_error @@ UnsuppotedFile e
+
+let undefined_identifier e = kyo_error @@ UndefinedIdentifier e
+
+let multiple_function_defintions definitions = kyo_error @@ MultipleFunctionDefinitions definitions
+
 let lexer_error e = kyo_error @@ LexerError e
 
 

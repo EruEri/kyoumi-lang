@@ -58,7 +58,11 @@ module Make (S : OrderedType) = struct
   (**
     add a new node to the graph. the graph is physically equal if the node was already in the graph    
   *)
-  let add_node (node : S.t) (graph : graph) = NodeSet.add node graph.nodes
+  let add_node (node : S.t) (graph : graph) = 
+    let nodes = NodeSet.add node graph.nodes in
+  {
+    graph with nodes
+  }
 
   let of_seq (nodes : S.t Seq.t) : graph =
     let node_set = nodes |> Seq.map (fun node -> node) |> NodeSet.of_seq in

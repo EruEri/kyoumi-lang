@@ -26,11 +26,3 @@ let rec kyo_program ~acc = function
   kyo_program ~acc:(KyoumiAst.{filename = kyofile; kyo_module}::acc) q
 
 let kyo_program = kyo_program ~acc:[]
-  
-let rec map_ok f = function 
-  | [] -> Result.ok []
-  | t::q -> 
-    let (let*) = Result.bind in
-    let* res = f t in
-    let* list = map_ok f q in
-    Result.ok @@ res::list 
