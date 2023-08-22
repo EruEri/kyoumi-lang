@@ -2,6 +2,10 @@
 //     val ask : fn() `a 'a
 // }
 
+effect input {
+    val input : fn(): $`a string
+}
+
 type list('a) = 
     | nil
     | cons ('a, list('a))
@@ -15,7 +19,7 @@ let map = fun(list, mapper) -> match list {
 } 
 end
 
-external `+`(int, int): ` b int = "kyoumi_int_add"
+external `+`(int, int): $`b int = "kyoumi_int_add"
 
 
 let main : $(`a & `b) int = 

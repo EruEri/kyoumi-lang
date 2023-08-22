@@ -23,7 +23,7 @@ let calling_graph _kyo_program kyo_module =
   kyo_module
   |> List.fold_left (fun graph -> function
   | KNDeclaration _ -> failwith ""
-  | KNEffect _|KNEnum _|KNRecord _|KNExternal _ ->
+  | KNEffect _| KNType _|KNExternal _ ->
     graph
   ) KyoGraph.empty
 

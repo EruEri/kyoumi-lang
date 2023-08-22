@@ -28,25 +28,26 @@ effect raise('a) {
 
     val default : int
     // symbole a backtick (`) are polymorphic variable effect
-    fn raise(string) : `a 'a
+    fn raise(string) : $`a 'a
 }
 
-external `+`(int, int) : total  int = "c_implementation"
+external `+`(int, int) : $total  int = "c_implementation"
 //                         ^     ^
 //                         |     | 
 //                       effect type
 
 let const_value = 10
 
-fn throw(): raise(int) int = 
+let throw: fn(): $raise(int) int = fun() ->
     let res = perform raise.raise("A message") in
     // or 
     let perform2 = &. raise.raise("A another syntax") in
     res + perform2
     // which is a syntaxic sugar for
     `+`(res, perform2)
+end
 
-fn main(): int = 
+fn main = 
     let handler_raise = handler raise {
         let default = 10
         fn raise(message) : `a int = 

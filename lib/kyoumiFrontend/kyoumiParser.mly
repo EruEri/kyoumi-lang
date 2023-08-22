@@ -146,7 +146,7 @@ kyo_module:
 
 kyo_node:
     | kyo_effect_decl { KNEffect $1 }
-    | kyo_type_decl { $1 }
+    | kyo_type_decl { KNType $1 }
     | kyo_external_decl { KNExternal $1 }
     | kyo_global_decl(kyo_expression) { KNDeclaration $1 }
 
@@ -333,11 +333,10 @@ kyo_external_decl:
 kyo_type_decl:
     | TYPE record_name=located(IDENT) polymorp_vars=generics(kyo_ky_polymorphic) EQUAL fields=kyo_record_decl {
         let open KNodeRecord in
-        KNRecord { record_name; polymorp_vars; fields }
+        KyoTyRecordDecl { record_name; polymorp_vars; fields }
     }
     | TYPE enum_name=located(IDENT) polymorp_vars=generics(kyo_ky_polymorphic) EQUAL cases=kyo_enum_decl {
-        let open KNodeEnum in
-        KNEnum { enum_name; polymorp_vars; cases }
+        KyoTyEnumDecl { enum_name; polymorp_vars; cases }
     }
 
 kyo_enum_decl:

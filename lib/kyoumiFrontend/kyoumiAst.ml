@@ -327,10 +327,13 @@ module KExpresssion = struct
   | KyEffImplLet of kyo_resumable_expression global_declaration
 end
 
+type kyo_type_declaration = 
+  | KyoTyEnumDecl of KNodeEnum.enum_declaration
+  | KyoTyRecordDecl of KNodeRecord.record_declaration
+
 type kyo_node = 
 | KNEffect of KNodeEffect.effect_declaration
-| KNEnum of KNodeEnum.enum_declaration
-| KNRecord of KNodeRecord.record_declaration
+| KNType of kyo_type_declaration
 | KNExternal of KnodeExternal.external_declaration
 | KNDeclaration of KExpresssion.kyo_expression KExpresssion.global_declaration
 
