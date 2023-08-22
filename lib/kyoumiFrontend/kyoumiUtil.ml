@@ -46,6 +46,13 @@ module KyoNodeConstraintHash = Hashtbl.Make(KyoNodeConstraintHashedType)
 (* 
 let kyo_node_constraint = KyoNodeConstraintHash.create 21 *)
 
+module KyoFunctionDeclaration = struct
+  let calling_name = function
+  | KyoFnExternal {sig_name = name; sig_external_name = _; sig_function = _}
+  | KyoFnDeclaration {gvariable_name = name; greturn_type = _; gbody = _} -> 
+    name
+end
+
 module KyoEnv = struct
 
   type kyo_opened_module = {
@@ -115,6 +122,9 @@ module KyoEnv = struct
   (** [mem name kyo_env] checks if the identifier [name] exists in the variable environment [kyo_env]*)
   let mem name kyo_env = 
     Option.is_some @@ assoc_type_opt name kyo_env
+
+  let modules kyo_env = 
+    kyo_env.opened_modules.modules @ [kyo_env.opened_modules.current_module]
 
 end
 
@@ -202,6 +212,7 @@ module Module = struct
       if name = filename then Some kyo_module else None
     )
 
+
     let function_declarations kyo_module = 
       kyo_module
       |> List.filter_map @@ function
@@ -213,6 +224,26 @@ module Module = struct
       |>  List.filter_map @@ function
       | KNType type_decl -> Some type_decl
       | KNFunction _  | KNEffect _ -> None
+
+    (** 
+      [find_single_declaration name kyo_module] looks into the module [kyo_module] for the function declaration [name]
+      Returns [None] if nothing, [Some declaration] if single and raise [KyoumiError] if multiple declarations have the
+      same name
+
+      @raise KyoumiError
+    *)
+    let find_single_declaration name = fun kyo_module -> 
+      let declarations = function_declarations kyo_module in
+      let matched_name_declaration = List.find_all (fun decl ->
+        let decl_name = KyoFunctionDeclaration.calling_name decl in
+        decl_name.value = name.value
+      ) declarations 
+      in
+      match matched_name_declaration with
+      | [] -> None
+      | t::[] -> Some t
+      | _::_ as declarations -> raise @@ KyoumiError.multiple_function_defintions declarations
+
     
     let rec calling_graph_expr' current_declaration (kyo_env: KyoEnv.kyo_env) graph expr = calling_graph_expr current_declaration kyo_env graph @@ Util.Position.value expr
     and calling_graph_expr current_declaration kyo_env graph = 
@@ -220,31 +251,48 @@ module Module = struct
     function
     | EUnit | ECmpLess | ECmpEqual | ECmpGreater | EInteger _ | EFloat _ -> 
       graph
+    | EOpen {module_resolver; next} -> 
+      let kyo_module = 
+        match find_module module_resolver kyo_env.program with
+        | Some kyo_module -> kyo_module
+        | None -> raise @@ KyoumiError.unbound_module module_resolver
+      in
+      let kyo_env = KyoEnv.add_module kyo_module kyo_env in
+      calling_graph_expr' current_declaration kyo_env graph next
     | EIdentifier {module_resolver = []; name}  -> 
       let graph = match KyoEnv.mem name.value kyo_env with
         | true -> graph 
         | false -> 
-          let graph = 
-            match function_declarations kyo_env.opened_modules.current_module with
-            | [] -> raise @@ KyoumiError.undefined_identifier name
-            | t::[] -> begin match t with
-              | KyoFnExternal _ -> graph
-              | KyoFnDeclaration declaration -> 
-                let graph = KyoFunctionGraph.add_node declaration graph in
-                let graph = KyoFunctionGraph.link current_declaration ~along:declaration graph in
-                graph
-            end
-            | list -> raise @@ KyoumiError.multiple_function_defintions list
+          let declaration = 
+            kyo_env
+            |> KyoEnv.modules
+            |> List.find_map (find_single_declaration name)
           in
-         graph
+          let graph = match declaration with
+            | None -> raise @@ KyoumiError.undefined_identifier name
+            | Some KyoFnExternal _ -> graph
+            | Some KyoFnDeclaration declaration -> 
+              KyoFunctionGraph.add_link current_declaration ~along:declaration graph
+          in
+          graph
         in
       graph
-    | EIdentifier {module_resolver = _::_ as module_resolver; name = _} -> 
-      let _kyo_module = match find_module module_resolver kyo_env.program with 
-        | Some m -> m
-        | None -> raise @@ KyoumiError.unbound_module module_resolver
-      in
+    | EIdentifier {module_resolver = _::_ as module_resolver; name} -> 
+        let kyo_module = match find_module module_resolver kyo_env.program with 
+          | Some m -> m
+          | None -> raise @@ KyoumiError.unbound_module module_resolver
+        in
+        let declaration = find_single_declaration name kyo_module in
+        let graph = match declaration with
+          | None -> raise @@ KyoumiError.undefined_identifier name
+          | Some KyoFnExternal _ -> graph
+          | Some KyoFnDeclaration declaration -> 
+            KyoFunctionGraph.add_link current_declaration ~along:declaration graph
+        in
+      graph
+    | ETuple _expressions -> 
       failwith ""
+      (* List.fold_left (calling_graph_expr' current_declaration kyo_env ) graph expressions *)
     | _ -> failwith ""
 
   (** 

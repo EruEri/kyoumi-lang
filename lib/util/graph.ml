@@ -104,6 +104,20 @@ module Make (S : OrderedType) = struct
     let edge = { root = node; along } in
     { graph with edges = EdgeSet.add edge graph.edges }
 
+  (** 
+    Add an egde beetween [node] and [along] in [graph]. 
+    Same as [link] but add node if doesn't exist instead of raising an exception
+  *)
+  let add_link (node : S.t) ~(along : S.t) (graph : graph) : graph =
+    let open EgdesSig in
+    let graph = 
+      graph
+      |> add_node node
+      |> add_node along
+    in
+    let edge = { root = node; along } in
+    { graph with edges = EdgeSet.add edge graph.edges }
+
   let mutual_link (node1 : S.t) (node2 : S.t) (graph : graph) : graph =
     let graph = link node1 ~along:node2 graph in
     link node2 ~along:node1 graph
