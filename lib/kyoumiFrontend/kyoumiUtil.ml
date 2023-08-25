@@ -128,6 +128,19 @@ module KyoEnv = struct
 
 end
 
+module KyoSmartType = struct
+  let kyo_type pure_type = 
+    KyoumiAst.KyoType.TyPureType  pure_type
+
+  let ty_unit = kyo_type TyUnit
+  let ty_ordered = kyo_type TyOredered
+  let ty_bool = kyo_type TyBool
+  let ty_integer = kyo_type TyInteger
+  let ty_float = kyo_type TyFloat
+  let ty_string = kyo_type TyString
+  let ty_tuples ttys = kyo_type @@ TyTuple ttys
+end
+
 module KyTypeEffect = struct
 
   let rec flatten_kyo_effect effect = match effect.value with
@@ -135,7 +148,7 @@ module KyTypeEffect = struct
   | EffLocList effects ->
     effects |> List.map flatten_kyo_effect |> List.flatten
 
-  let rec of_kyoloc_type = function
+  let rec of_kyoloc_pure_type = function
   | KyoLocType.TyLocParametricIdentifier {
     module_resolver;
     parametrics_type;
@@ -152,11 +165,6 @@ module KyTypeEffect = struct
     let module_resolver = values module_resolver in
     let name = value name in 
     TyIdentifier {module_resolver; name}
-  | TyLocEffectedType {kyo_effect; kyo_type} ->
-    TyEffectedType {
-      kyo_effect = of_kyoloc_effect' kyo_effect;
-      kyo_type = of_kyoloc_type' kyo_type
-    }
   | TyLocHandler effects ->
     let effects = of_kyoloc_effect' effects in
     TyHandler effects
@@ -180,7 +188,16 @@ module KyTypeEffect = struct
   | TyLocUnit -> TyUnit
   | TyLocBool -> TyBool
   | TyLocChar -> TyChar
-  and of_kyoloc_type' ky_loc = of_kyoloc_type @@ value ky_loc
+  and of_kyoloc_pure_type' ky_loc = of_kyoloc_pure_type @@ value ky_loc
+  and of_kyoloc_type' ky_loc = of_kyoloc_type @@ value ky_loc 
+  and of_kyoloc_type = function
+  | TyLocEffectedType {kyo_effect; kyo_type} -> 
+    let kyo_effect = of_kyoloc_effect' kyo_effect in
+    let kyo_type = of_kyoloc_pure_type' kyo_type in
+    TyEffectedType {kyo_effect; kyo_type}
+  | TyLocPureType t -> 
+    TyPureType (of_kyoloc_pure_type t)
+
   and of_kyoloc_effect' keff_loc = of_kyoloc_effect @@ value keff_loc
   and of_kyoloc_effect = function
   | EffLocPolymorphic s -> 
@@ -249,7 +266,7 @@ module Module = struct
     and calling_graph_expr current_declaration kyo_env graph = 
     let open KyoumiAst.KExpresssion in
     function
-    | EUnit | ECmpLess | ECmpEqual | ECmpGreater | EInteger _ | EFloat _ -> 
+    | EUnit | ECmpLess | ECmpEqual | ECmpGreater | EInteger _ | EFloat _ | EString _ -> 
       graph
     | EOpen {module_resolver; next} -> 
       let kyo_module = 
@@ -290,10 +307,19 @@ module Module = struct
             KyoFunctionGraph.add_link current_declaration ~along:declaration graph
         in
       graph
-    | ETuple _expressions -> 
-      failwith ""
-      (* List.fold_left (calling_graph_expr' current_declaration kyo_env ) graph expressions *)
-    | _ -> failwith ""
+    | ETuple expressions -> 
+      (* Doubt on the kyo_env between expression *)
+      List.fold_left (calling_graph_expr' current_declaration kyo_env ) graph expressions
+    | EEnum _
+    | ERecord _ 
+    | ERecordAccess _ 
+    | EDeclaration (_, _)
+    | EAnonFunction _ 
+    | EFunctionCall _ 
+    | EHandler _ 
+    | EPerform _ 
+    | EWhile _ 
+    | EMatch (_, _) -> failwith ""
 
   (** 
     [calling_graph kyo_program] builds a graph where where each node is and a [kyo_node] and

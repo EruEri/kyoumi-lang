@@ -406,6 +406,15 @@ kyo_effect:
 
 
 kyo_type:
+    | DOLLAR kyo_effect=located(kyo_effect) kyo_type=located(kyo_pure_type) {
+        TyLocEffectedType {
+            kyo_effect;
+            kyo_type;
+        }
+    }
+    | kyo_pure_type { TyLocPureType $1 }
+
+kyo_pure_type:
     | kyo_ky_polymorphic {
         TyLocPolymorphic $1
     }
@@ -415,19 +424,12 @@ kyo_type:
     | HANDLER parenthesis(located(kyo_effect)) {
         TyLocHandler $2
     }
-    | DOLLAR kyo_effect=located(kyo_effect) kyo_type=located(kyo_type) {
-        TyLocEffectedType {
-            kyo_effect;
-            kyo_type;
-        }
-    }
     | FUNCTION signature {
         TyLocFunction $2
     }
     | parenthesis(separated_list(COMMA, located(kyo_type))) {
         match $1 with
         | [] -> TyLocUnit
-        | t::[] -> t.value
         | list -> TyLocTuple list
     }
      

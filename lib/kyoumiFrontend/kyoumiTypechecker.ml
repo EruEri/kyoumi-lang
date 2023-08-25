@@ -25,17 +25,17 @@ module KyoEnv = KyoumiUtil.KyoEnv
 let rec typeof_expr' kyo_env expr = typeof_expr kyo_env @@ value expr
 
 and typeof_expr (kyo_env : KyoEnv.kyo_env) = 
-let open KyoumiAst.KyoType in
+let open KyoSmartType in
 function
-| EUnit -> kyo_env, TyUnit
+| EUnit -> kyo_env, ty_unit
 | ECmpLess | ECmpEqual | ECmpGreater ->
-  kyo_env, TyOredered
+  kyo_env, ty_ordered
 | EInteger _ -> 
-  kyo_env, TyInteger
+  kyo_env, ty_integer
 | EFloat _ -> 
-  kyo_env, TyFloat
+  kyo_env, ty_float
 | EString _ -> 
-  kyo_env, TyString
+  kyo_env, ty_string
 | EOpen {module_resolver; next} ->
   let kyo_module = 
     match Module.find_module module_resolver kyo_env.program with
@@ -49,7 +49,7 @@ function
   let kyo_extented_env, kyo_types = 
   List.fold_left_map typeof_expr' kyo_env kyo_exprs
   in
-  kyo_extented_env, TyTuple (kyo_types)
+  kyo_extented_env, ty_tuples kyo_types
 | EWhile {w_condition; w_body} ->
   let (env, c) = typeof_expr' kyo_env w_condition in
   let kyo_env = KyoEnv.merge_constraints kyo_env env in
@@ -57,37 +57,37 @@ function
   let kyo_env = KyoEnv.merge_constraints kyo_env env in
   let kyo_env = 
     kyo_env
-    |> KyoEnv.add_constraint ~lhs:c ~rhs:TyBool
-    |> KyoEnv.add_constraint ~lhs:b ~rhs:TyUnit
+    |> KyoEnv.add_constraint ~lhs:c ~rhs:ty_bool
+    |> KyoEnv.add_constraint ~lhs:b ~rhs:ty_unit
   in
-  kyo_env, TyUnit
+  kyo_env, ty_unit
 | EFunctionCall {e_module_resolver; e_function_name; parameters; handlers} ->
   let () = ignore (e_module_resolver,e_function_name, parameters, handlers) in
   failwith ""
 | _ -> failwith ""
 and typeof_pattern' scrutinee_type kyo_env pattern = typeof_pattern scrutinee_type kyo_env @@ value pattern
 and typeof_pattern scrutinee_type kyo_env = 
-let open KyoumiAst.KyoType in
+let open KyoumiUtil.KyoSmartType in
 function
 | PTrue | PFalse -> 
-  let kyo_env = KyoEnv.add_constraint ~lhs:scrutinee_type ~rhs:KyoumiAst.KyoType.TyBool kyo_env in 
-  kyo_env, KyoumiAst.KyoType.TyBool
+  let kyo_env = KyoEnv.add_constraint ~lhs:scrutinee_type ~rhs:ty_bool kyo_env in 
+  kyo_env, ty_bool
 | PEmpty -> 
-  let ptype = TyUnit in
+  let ptype = ty_unit in
   let kyo_env = KyoEnv.add_constraint ~lhs:scrutinee_type ~rhs:ptype kyo_env in 
   kyo_env, ptype
 | PCmpLess | PCmpEqual | PCmpGreater ->
-  let ptype = TyOredered in
+  let ptype = ty_ordered in
   let kyo_env = KyoEnv.add_constraint ~lhs:scrutinee_type ~rhs:ptype kyo_env in 
   kyo_env, ptype
 | PWildcard ->
   kyo_env, scrutinee_type
 | PFloat _ ->
-  let ptype = TyFloat in
+  let ptype = ty_float in
   let kyo_env = KyoEnv.add_constraint ~lhs:scrutinee_type ~rhs:ptype kyo_env in 
   kyo_env, ptype
 | PInteger _ ->
-  let ptype = TyInteger in
+  let ptype = ty_integer in
   let kyo_env = KyoEnv.add_constraint ~lhs:scrutinee_type ~rhs:ptype kyo_env in 
   kyo_env, ptype
 | PIdentifier id ->
